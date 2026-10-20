@@ -1,0 +1,252 @@
+// ========================================================
+// 🐾 PawPulse Power BI Production DAX Measures
+// Module 5: Power BI Analytics Engine
+// ========================================================
+
+// --------------------------------------------------------
+// 1. VOLUME & CONSULTATION MEASURES
+// --------------------------------------------------------
+
+[Total Booked Appointments] = 
+COUNTROWS(FactAppointments)
+
+[Total Completed Consultations] = 
+CALCULATE(
+    COUNTROWS(FactAppointments),
+    FactAppointments[Status] = "completed"
+)
+
+[Consultations (Last 30 Days)] = 
+CALCULATE(
+    [Total Completed Consultations],
+    DATESINPERIOD(
+        DimDate[FullDate],
+        MAX(DimDate[FullDate]),
+        -30,
+        DAY
+    )
+)
+
+[7-Day Moving Average Consultations] = 
+AVERAGEX(
+    DATESINPERIOD(
+        DimDate[FullDate],
+        LASTDATE(DimDate[FullDate]),
+        -7,
+        DAY
+    ),
+    [Total Completed Consultations]
+)
+
+[No-Show Count] = 
+CALCULATE(
+    COUNTROWS(FactAppointments),
+    FactAppointments[Status] = "no_show"
+)
+
+[No-Show Rate %] = 
+DIVIDE(
+    [No-Show Count],
+    [Total Booked Appointments],
+    0
+)
+
+[Completed Visit Rate %] = 
+DIVIDE(
+    [Total Completed Consultations],
+    [Total Booked Appointments],
+    0
+)
+
+// --------------------------------------------------------
+// 2. FINANCIAL & REVENUE MEASURES
+// --------------------------------------------------------
+
+[Total Revenue INR] = 
+CALCULATE(
+    SUM(FactPayments[AmountINR]),
+    FactPayments[PaymentStatus] = "completed"
+)
+
+[Revenue (Last 30 Days)] = 
+CALCULATE(
+    [Total Revenue INR],
+    DATESINPERIOD(
+        DimDate[FullDate],
+        MAX(DimDate[FullDate]),
+        -30,
+        DAY
+    )
+)
+
+[Revenue Previous Month] = 
+CALCULATE(
+    [Total Revenue INR],
+    DATEADD(DimDate[FullDate], -1, MONTH)
+)
+
+[MoM Revenue Growth %] = 
+VAR CurrentRev = [Total Revenue INR]
+VAR PriorRev = [Revenue Previous Month]
+RETURN
+DIVIDE(CurrentRev - PriorRev, PriorRev, 0)
+
+[Average Ticket Size INR] = 
+DIVIDE(
+    [Total Revenue INR],
+    [Total Completed Consultations],
+    0
+)
+
+[Teleconsult Revenue INR] = 
+CALCULATE(
+    [Total Revenue INR],
+    FactAppointments[ServiceType] = "teleconsult"
+)
+
+[Clinic Visit Revenue INR] = 
+CALCULATE(
+    [Total Revenue INR],
+    FactAppointments[ServiceType] = "clinic"
+)
+
+[Home Visit Revenue INR] = 
+CALCULATE(
+    [Total Revenue INR],
+    FactAppointments[ServiceType] = "home_visit"
+)
+
+// --------------------------------------------------------
+// 3. REFERRAL & SLA TURNAROUND TIME (TAT) MEASURES
+// --------------------------------------------------------
+
+[Total Referrals Handed Off] = 
+COUNTROWS(FactReferrals)
+
+[Accepted Referrals Count] = 
+CALCULATE(
+    COUNTROWS(FactReferrals),
+    FactReferrals[ReferralStatus] IN {"accepted", "completed"}
+)
+
+[Average Referral TAT (Hours)] = 
+AVERAGE(FactReferrals[TATHours])
+
+[SLA Target TAT (Hours)] = 
+4.0
+
+[SLA Breached Referrals Count] = 
+CALCULATE(
+    COUNTROWS(FactReferrals),
+    FactReferrals[TATHours] > 4.0
+)
+
+[SLA Breach Rate %] = 
+DIVIDE(
+    [SLA Breached Referrals Count],
+    [Accepted Referrals Count],
+    0
+)
+
+[SLA Compliance Rate %] = 
+1 - [SLA Breach Rate %]
+
+[SLA Health Status Icon] = 
+IF(
+    [Average Referral TAT (Hours)] <= 4.0,
+    "🟢 SLA Met",
+    "🔴 SLA Breached"
+)
+
+// --------------------------------------------------------
+// 4. PRESCRIPTION COMPLIANCE MEASURES
+// --------------------------------------------------------
+
+[Total Prescriptions Issued] = 
+COUNTROWS(FactPrescriptions)
+
+[Prescriptions Uploaded Count] = 
+CALCULATE(
+    COUNTROWS(FactPrescriptions),
+    FactPrescriptions[IsUploaded] = TRUE()
+)
+
+[Rx Upload Compliance %] = 
+DIVIDE(
+    [Prescriptions Uploaded Count],
+    [Total Prescriptions Issued],
+    0
+)
+
+[Protocol Target Compliance %] = 
+0.90
+
+[Rx Compliance Gap %] = 
+[Rx Upload Compliance %] - [Protocol Target Compliance %]
+
+// --------------------------------------------------------
+// 5. RETENTION & DEMOGRAPHIC MEASURES
+// --------------------------------------------------------
+
+[Total Registered Pets] = 
+DISTINCTCOUNT(DimPets[PetID])
+
+[Total Registered Pet Parents] = 
+DISTINCTCOUNT(DimOwners[OwnerID])
+
+[Active Pets (Last 90 Days)] = 
+CALCULATE(
+    DISTINCTCOUNT(FactAppointments[PetID]),
+    FactAppointments[Status] = "completed",
+    DATESINPERIOD(
+        DimDate[FullDate],
+        MAX(DimDate[FullDate]),
+        -90,
+        DAY
+    )
+)
+
+[Repeat Visitor Pets (90D)] = 
+VAR PetsWithVisitCounts = 
+    ADDCOLUMNS(
+        VALUES(DimPets[PetID]),
+        "@VisitCount",
+        CALCULATE(
+            COUNTROWS(FactAppointments),
+            FactAppointments[Status] = "completed",
+            DATESINPERIOD(
+                DimDate[FullDate],
+                MAX(DimDate[FullDate]),
+                -90,
+                DAY
+            )
+        )
+    )
+RETURN
+COUNTROWS(
+    FILTER(
+        PetsWithVisitCounts,
+        [@VisitCount] >= 2
+    )
+)
+
+[Repeat Visit Retention Rate %] = 
+DIVIDE(
+    [Repeat Visitor Pets (90D)],
+    [Active Pets (Last 90 Days)],
+    0
+)
+
+[Dog Patient Share %] = 
+DIVIDE(
+    CALCULATE([Total Completed Consultations], DimPets[Species] = "dog"),
+    [Total Completed Consultations],
+    0
+)
+
+[Cat Patient Share %] = 
+DIVIDE(
+    CALCULATE([Total Completed Consultations], DimPets[Species] = "cat"),
+    [Total Completed Consultations],
+    0
+)

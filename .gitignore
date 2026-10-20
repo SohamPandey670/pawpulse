@@ -1,0 +1,29 @@
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.*.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Java / Maven / Spring Boot
+backend/target/
+backend/.mvn/
+backend/*.log
+backend/pom.xml.tag
+backend/pom.xml.releaseBackup
+backend/pom.xml.versionsBackup
+backend/.idea/
+backend/*.iml
+
+# Python / Excel venv
+.venv/
+__pycache__/
+*.pyc
+
+# Local profiles / logs
+chrome-profile/
+*.log
+.DS_Store
+Thumbs.db
