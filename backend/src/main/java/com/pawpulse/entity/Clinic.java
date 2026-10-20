@@ -28,7 +28,7 @@ public class Clinic {
     @Column(nullable = false)
     private String type; // clinic, mobile, teleconsult
 
-    @Column(nullable = false, updatable = false)
+    @Column(updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 }

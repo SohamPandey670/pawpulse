@@ -33,11 +33,10 @@ public class Owner {
 
     private String state;
 
-    @Column(nullable = false)
     @Builder.Default
     private String role = "OWNER";
 
-    @Column(nullable = false, updatable = false)
+    @Column(updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 }

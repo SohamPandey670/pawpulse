@@ -32,13 +32,12 @@ public class Vet {
     @Column(nullable = false)
     private String passwordHash;
 
-    @Column(nullable = false)
     @Builder.Default
     private String role = "VET";
 
     private Double rating;
 
-    @Column(nullable = false, updatable = false)
+    @Column(updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 }
