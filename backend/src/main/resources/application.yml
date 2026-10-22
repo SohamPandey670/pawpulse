@@ -18,6 +18,7 @@ spring:
       path: /h2-console
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: create-drop
     show-sql: false
@@ -61,11 +62,9 @@ spring:
       enabled: false
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   sql:
     init:
