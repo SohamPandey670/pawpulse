@@ -1,9 +1,13 @@
 import axios from 'axios';
 import * as synthetic from '../data/syntheticData';
 
-// If VITE_API_URL is explicitly configured, use it. Otherwise, default to synthetic mode
-// so Chrome console remains pristine without ERR_CONNECTION_REFUSED network spam.
-const API_BASE_URL = import.meta.env.VITE_API_URL || null;
+// If VITE_API_URL is configured, use it (with /api suffix). Otherwise, default to synthetic mode
+const rawApiUrl = import.meta.env.VITE_API_URL || null;
+export const API_BASE_URL = rawApiUrl
+  ? (rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl.replace(/\/$/, '')}/api`)
+  : null;
+
+export const isLiveBackend = Boolean(API_BASE_URL);
 
 const api = API_BASE_URL
   ? axios.create({
@@ -11,7 +15,7 @@ const api = API_BASE_URL
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 3000,
+      timeout: 10000,
     })
   : null;
 

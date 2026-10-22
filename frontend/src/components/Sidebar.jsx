@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { isLiveBackend } from '../services/api';
 import {
   LayoutDashboard,
   GitPullRequest,
@@ -129,7 +130,9 @@ export default function Sidebar() {
             <span className="paw-status-dot"></span>
             <span className="paw-status-label">PostgreSQL / Spring API</span>
           </div>
-          <div className="paw-status-sub">Synthetic Demo Active</div>
+          <div className="paw-status-sub">
+            {isLiveBackend ? 'Live PostgreSQL Active' : 'Synthetic Demo Active'}
+          </div>
         </div>
       </div>
 
