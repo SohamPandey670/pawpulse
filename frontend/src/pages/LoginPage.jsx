@@ -477,16 +477,53 @@ export default function LoginPage() {
               </div>
 
               <div className="paw-form-group">
-                <label className="paw-form-label">Account Role</label>
+                <label className="paw-form-label">Select Your Role</label>
+                
+                {/* Visual Role Cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginBottom: '8px' }}>
+                  {[
+                    { role: 'OWNER', label: 'Pet Parent', sub: 'Pet Health Records' },
+                    { role: 'VET', label: 'Veterinarian', sub: 'Clinical Console & Rx' },
+                    { role: 'COORDINATOR', label: 'Coordinator', sub: 'SLA & Referrals' },
+                    { role: 'ADMIN', label: 'Clinic Admin', sub: 'Full Operations' },
+                  ].map((item) => (
+                    <div
+                      key={item.role}
+                      onClick={() => setSignupRole(item.role)}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: signupRole === item.role ? '1px solid #818cf8' : '1px solid rgba(255, 255, 255, 0.1)',
+                        background: signupRole === item.role ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, fontSize: '0.84rem', color: signupRole === item.role ? '#fff' : '#cbd5e1' }}>
+                        {item.label}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        {item.sub}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Styled Select Fallback */}
                 <select
                   value={signupRole}
                   onChange={(e) => setSignupRole(e.target.value)}
                   className="paw-form-select"
+                  style={{
+                    backgroundColor: '#131b2e',
+                    color: '#ffffff',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                  }}
                 >
-                  <option value="OWNER">Pet Parent (Pet Health Records & Booking)</option>
-                  <option value="VET">Veterinarian (Consultation Queue & Camera Rx)</option>
-                  <option value="COORDINATOR">Care Coordinator (SLA Pipeline & Referrals)</option>
-                  <option value="ADMIN">Clinic Operations Admin (Full Management)</option>
+                  <option value="OWNER" style={{ backgroundColor: '#131b2e', color: '#ffffff' }}>Pet Parent (Pet Health Records & Booking)</option>
+                  <option value="VET" style={{ backgroundColor: '#131b2e', color: '#ffffff' }}>Veterinarian (Consultation Queue & Camera Rx)</option>
+                  <option value="COORDINATOR" style={{ backgroundColor: '#131b2e', color: '#ffffff' }}>Care Coordinator (SLA Pipeline & Referrals)</option>
+                  <option value="ADMIN" style={{ backgroundColor: '#131b2e', color: '#ffffff' }}>Clinic Operations Admin (Full Management)</option>
                 </select>
               </div>
 

@@ -1990,6 +1990,17 @@ a:hover {
   box-sizing: border-box;
 }
 
+select, .paw-form-select, .paw-form-select-sm {
+  background-color: #131b2e;
+  color: #f8fafc;
+}
+
+select option, .paw-form-select option, .paw-form-select-sm option, option {
+  background-color: #131b2e !important;
+  color: #f8fafc !important;
+  padding: 10px 14px;
+}
+
 .paw-form-input:focus, .paw-form-select:focus, .paw-form-textarea:focus {
   border-color: #818cf8;
   box-shadow: 0 0 10px rgba(129, 140, 248, 0.2);
@@ -1997,7 +2008,7 @@ a:hover {
 
 .paw-form-select-sm {
   padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.04);
+  background: #131b2e;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
   color: #fff;
