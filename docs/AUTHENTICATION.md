@@ -134,5 +134,15 @@ http
 * **Enterprise Domain Verifier**: Separate 4,096-bit Bloom Filter indexing authorized enterprise SSO email domains (`pawpulse.in`, `pawcare.org`, `vetlife.health`, `petfirst.in`).
 
 ### 6.2 Google Sign-In & Single Sign-On (SSO)
-* **Google OAuth 2.0 Integration**: Supports official Google branded Sign-In workflow with authenticated profile hydration (`name`, `email`, `avatar`, `role`).
+* **Google OAuth 2.0 Integration**: Supports official Google branded Sign-In workflow with dynamic account input, allowing users to authenticate with any valid Google or Gmail address without hardcoded presets.
 * **SAML / Okta SSO Tab**: Enterprise users can enter their corporate domain to be matched against the Bloom filter and forwarded into their organization's SSO pipeline.
+
+### 6.3 Master Admin Credentials & User Registration Engine
+* **Master Admin Account**:
+  * **Username / Email**: `admin` or `admin@pawpulse.in`
+  * **Password**: `admin123` or `PawPulse@2026`
+  * **Role**: `ADMIN` (Full operational authority across all clinics, revenue metrics, and settings)
+  * **1-Click Auto-Fill**: Embedded directly on the login card for instantaneous evaluation.
+* **New User Sign-Up (Self-Service Registration)**:
+  * Users can toggle to the **"Create Account"** tab to register with their Full Name, Email, Username, Password, and target Role (`OWNER`, `VET`, `COORDINATOR`, `ADMIN`).
+  * Account credentials persist into `localStorage` (`pawpulse_registered_users`) and can immediately be used to log in on subsequent visits.

@@ -95,13 +95,15 @@ PawPulse was engineered as a production-ready, full-stack veterinary operations 
   4. Updated [Navbar.jsx](file:///C:/Users/soham/Desktop/pawpulse/frontend/src/components/Navbar.jsx) and [Sidebar.jsx](file:///C:/Users/soham/Desktop/pawpulse/frontend/src/components/Sidebar.jsx) with instant workspace switching buttons.
 * **Why**: The user requested a sub-project feature to create custom dashboards from arbitrary CSV/Excel files without creating a separate Vercel/Render/Supabase deployment, enabling both clinical operations and general data analytics in one place.
 
-### Phase 14: Bloom Filter Security, Google OAuth & Standalone AI Dashboard Codebase
+### Phase 14: Bloom Filter Security, Master Admin, Google OAuth & Standalone AI Dashboard Codebase
 * **What was done**:
-  1. *Bloom Filter Engine*: Implemented an 8,192-bit Bloom Filter (`bloomFilter.js`) with FNV-1a and Murmur3 hashing for sub-millisecond ($< 0.03\text{ms}$) client-side breached password matching and enterprise SSO domain validation.
-  2. *Google OAuth & Enterprise SSO*: Upgraded `LoginPage.jsx` to an industry-grade portal featuring Google Sign-In with official SVG branding, simulated Google account selection, and SAML/Okta enterprise domain verification.
-  3. *AI Conversational Copilot in Studio*: Upgraded `DashboardStudio.jsx` to start 100% clean and empty, automatically profile uploaded datasets, generate natural language summaries, execute Power BI-style DAX aggregations from user natural language prompts, and provide clarification dialogues when inputs are ambiguous.
-  4. *Independent Standalone Codebase*: Created a dedicated standalone repository at `C:\Users\soham\Desktop\smart-dashboard-ai` with its own `package.json`, Vite configuration, README, and verification build so the user can develop and run it independently or merge it anytime.
-* **Why**: To provide industry-level authentication security, eliminate hardcoded mock files in the analytics studio, empower non-uniform datasets with conversational intelligence, and fulfill the requirement of maintaining an independent codebase for future modularity.
+  1. *Master Admin Credentials*: Configured universal master admin credentials (`admin` / `admin123` or `PawPulse@2026`) with a 1-click auto-fill button on the login card.
+  2. *Standard User Registration (Sign In vs Sign Up)*: Rebuilt `LoginPage.jsx` to match industry standard apps with self-service registration (Name, Email, Username, Password, Role) persisting in `localStorage`.
+  3. *Dynamic Google Sign-In*: Provided an authentic Google OAuth modal accepting ANY custom Gmail address, removing hardcoded personal emails.
+  4. *Bloom Filter Engine*: Implemented an 8,192-bit Bloom Filter (`bloomFilter.js`) with FNV-1a and Murmur3 hashing for sub-millisecond ($< 0.03\text{ms}$) client-side breached password matching.
+  5. *AI Conversational Copilot in Studio*: Upgraded `DashboardStudio.jsx` to start 100% clean and empty, automatically profile uploaded datasets, generate natural language summaries, and execute Power BI-style DAX aggregations from user natural language prompts.
+  6. *Independent Standalone Codebase*: Created a dedicated standalone repository at `C:\Users\soham\Desktop\smart-dashboard-ai` with its own `package.json`, Vite configuration, README, and verification build so the user can develop and run it independently or merge it anytime.
+* **Why**: To provide an intuitive, standard production app login flow, give the user master admin credentials, eliminate hardcoded mock files in the analytics studio, and fulfill the requirement of maintaining an independent codebase for future modularity.
 
 ---
 

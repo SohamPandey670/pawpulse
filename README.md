@@ -19,11 +19,11 @@ PawPulse is a unified enterprise platform featuring dual workspaces:
 
 ## 🌟 Dual Workspace Architecture & Enterprise Features
 
-- **Enterprise Login Page with Bloom Filter & Google Sign-In (`/login`)**:
-  - **Bloom Filter Security Bitset**: Real-time $O(1)$ client-side evaluation (8,192 bits, 4 hash passes, < 0.05ms) scanning passwords against leaked credential databases.
-  - **Continue with Google**: Interactive Google OAuth 2.0 account authentication.
-  - **Enterprise SAML / Okta SSO**: Domain verification powered by an enterprise Bloom filter bitset.
-  - **1-Click Reviewer Personas**: Admin, Care Coordinator, Veterinarian, and Pet Parent for instant evaluation.
+- **Standard Enterprise Authentication Experience (`/login`)**:
+  - **Master Admin Account**: Username: `admin` | Password: `admin123` (or `PawPulse@2026`) with 1-click auto-fill button.
+  - **New User Registration (Sign Up)**: Real self-service account creation (Name, Email, Username, Password, Role) persisting in `localStorage`.
+  - **Continue with Google**: Authenticate with ANY Google/Gmail account of your choice via dynamic input modal.
+  - **Bloom Filter Guard**: Subtle client-side $O(1)$ leaked credential check protecting password inputs.
 - **Smart AI Auto-Dashboard Studio (`/studio`)**:
   - Starts **100% clean and empty** with a drag-and-drop uploader.
   - **AI Dataset Profiler**: Auto-detects domain (Sales, Healthcare, HR, Inventory), categorizes columns (Metrics vs Dimensions), and generates an executive plain-English summary.

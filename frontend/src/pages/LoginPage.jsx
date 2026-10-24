@@ -1,587 +1,548 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { demoUsers } from '../data/syntheticData';
-import { breachedPasswordFilter, enterpriseDomainFilter } from '../utils/bloomFilter';
+import { breachedPasswordFilter } from '../utils/bloomFilter';
 import {
   Activity,
-  Shield,
-  Stethoscope,
-  Heart,
-  GitPullRequest,
-  ArrowRight,
-  Sparkles,
   Lock,
   Mail,
+  User,
+  ArrowRight,
   CheckCircle2,
+  AlertCircle,
   FileSpreadsheet,
-  BarChart3,
-  UploadCloud,
-  Cpu,
-  AlertTriangle,
-  Check,
-  X,
+  Building2,
+  Sparkles,
   KeyRound,
-  Globe,
+  X,
 } from 'lucide-react';
 
 export default function LoginPage() {
-  const [selectedWorkspace, setSelectedWorkspace] = useState('clinic'); // 'csv_dashboard' | 'clinic'
-  const [activeTab, setActiveTab] = useState('credentials'); // 'credentials' | 'google' | 'sso'
-  const [email, setEmail] = useState('admin@pawpulse.in');
-  const [password, setPassword] = useState('admin123');
-  const [error, setError] = useState('');
-  const [showGoogleModal, setShowGoogleModal] = useState(false);
-  const [ssoDomain, setSsoDomain] = useState('');
-  const [ssoMessage, setSsoMessage] = useState('');
+  const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
+  const [selectedWorkspace, setSelectedWorkspace] = useState('clinic'); // 'clinic' | 'studio'
 
-  const { login, loginOAuth } = useAuth();
+  // Sign In State
+  const [identifier, setIdentifier] = useState('admin');
+  const [password, setPassword] = useState('admin123');
+
+  // Sign Up State
+  const [signupName, setSignupName] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupUsername, setSignupUsername] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [signupRole, setSignupRole] = useState('OWNER');
+
+  // Status & Google Dialog
+  const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [customGmail, setCustomGmail] = useState('');
+  const [customGoogleName, setCustomGoogleName] = useState('');
+
+  const { login, signup, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
-  // Bloom Filter Realtime Telemetry & Security Check
-  const bloomStats = useMemo(() => {
-    const t0 = performance.now();
-    const isCompromised = password.length > 0 ? breachedPasswordFilter.has(password) : false;
-    const t1 = performance.now();
-    const lookupDuration = Math.max(0.01, t1 - t0).toFixed(2);
-    const bitsSet = breachedPasswordFilter.getBitsSet();
-    const fpRate = (breachedPasswordFilter.getFalsePositiveRate() * 100).toFixed(4);
+  // Check password with Bloom Filter
+  const currentPassword = mode === 'signin' ? password : signupPassword;
+  const isBreachedPassword = currentPassword.length > 0 && breachedPasswordFilter.has(currentPassword);
 
-    return {
-      isCompromised,
-      lookupDuration,
-      bitsSet,
-      fpRate,
-    };
-  }, [password]);
-
-  const handleLogin = (e) => {
+  const handleSignIn = (e) => {
     e?.preventDefault();
     setError('');
-    const res = login(email, password);
+    setSuccessMsg('');
+
+    const res = login(identifier, password);
     if (res.success) {
-      if (res.user.role === 'ADMIN') navigate('/dashboard');
-      else if (res.user.role === 'COORDINATOR') navigate('/coordinator');
-      else if (res.user.role === 'VET') navigate('/vet');
-      else navigate('/owner');
+      redirectUser(res.user.role);
     } else {
-      setError(res.error || 'Invalid credentials');
+      setError(res.error || 'Invalid username or password');
     }
   };
 
-  const handleGoogleSelect = (googleUser) => {
-    const res = loginOAuth({
-      name: googleUser.name,
-      email: googleUser.email,
-      role: googleUser.role,
-      provider: 'google',
+  const handleSignUp = (e) => {
+    e?.preventDefault();
+    setError('');
+    setSuccessMsg('');
+
+    if (!signupName.trim() || !signupEmail.trim() || !signupPassword.trim()) {
+      setError('Please fill in all required fields.');
+      return;
+    }
+
+    const res = signup({
+      name: signupName,
+      email: signupEmail,
+      username: signupUsername || signupEmail.split('@')[0],
+      password: signupPassword,
+      role: signupRole,
     });
+
+    if (res.success) {
+      setSuccessMsg('Account created successfully! Entering platform...');
+      setTimeout(() => {
+        redirectUser(res.user.role);
+      }, 700);
+    } else {
+      setError(res.error || 'Could not create account');
+    }
+  };
+
+  const handleGoogleSubmit = (e) => {
+    e?.preventDefault();
+    if (!customGmail.trim()) {
+      setError('Please enter your Gmail address.');
+      return;
+    }
+
+    const email = customGmail.trim();
+    const name = customGoogleName.trim() || email.split('@')[0];
+    
+    // Choose role based on email or admin
+    const role = email.toLowerCase().includes('vet') ? 'VET' : email.toLowerCase().includes('admin') ? 'ADMIN' : 'OWNER';
+
+    const res = loginWithGoogle({
+      email,
+      name,
+      role,
+    });
+
     setShowGoogleModal(false);
     if (res.success) {
-      if (res.user.role === 'ADMIN') navigate('/dashboard');
-      else if (res.user.role === 'COORDINATOR') navigate('/coordinator');
-      else if (res.user.role === 'VET') navigate('/vet');
-      else navigate('/owner');
+      redirectUser(res.user.role);
     }
   };
 
-  const handleSsoCheck = (e) => {
-    e.preventDefault();
-    if (!ssoDomain) return;
-    const domain = ssoDomain.includes('@') ? ssoDomain.split('@')[1] : ssoDomain;
-    const isRecognized = enterpriseDomainFilter.has(domain);
-
-    if (isRecognized) {
-      setSsoMessage(`✓ Bloom Filter: '${domain}' identified as verified enterprise identity provider. Redirecting to SAML/Okta Gateway...`);
-      setTimeout(() => {
-        handleGoogleSelect({
-          name: `${domain.split('.')[0].toUpperCase()} Enterprise User`,
-          email: `sso@${domain}`,
-          role: 'ADMIN',
-        });
-      }, 1200);
-    } else {
-      setSsoMessage(`ℹ️ Domain '${domain}' not pre-indexed in Bloom Filter. Proceeding via fallback OAuth discovery...`);
-      setTimeout(() => {
-        handleGoogleSelect({
-          name: 'Enterprise SSO User',
-          email: `user@${domain}`,
-          role: 'COORDINATOR',
-        });
-      }, 1500);
-    }
+  const autoFillMasterAdmin = () => {
+    setMode('signin');
+    setIdentifier('admin');
+    setPassword('admin123');
+    setError('');
   };
 
-  const selectDemoRole = (roleKey) => {
-    const creds = demoUsers[roleKey];
-    if (creds) {
-      setEmail(creds.email);
-      setPassword(creds.password);
-      const res = login(creds.email, creds.password);
-      if (res.success) {
-        if (res.user.role === 'ADMIN') navigate('/dashboard');
-        else if (res.user.role === 'COORDINATOR') navigate('/coordinator');
-        else if (res.user.role === 'VET') navigate('/vet');
-        else navigate('/owner');
-      }
-    }
+  const redirectUser = (role) => {
+    if (role === 'ADMIN') navigate('/dashboard');
+    else if (role === 'COORDINATOR') navigate('/coordinator');
+    else if (role === 'VET') navigate('/vet');
+    else navigate('/owner');
   };
 
   return (
-    <div className="paw-login-page">
-      <div className="paw-login-container" style={{ maxWidth: '640px' }}>
-        {/* Header Branding */}
-        <div className="paw-login-header">
-          <div className="paw-login-brand">
-            <div className="paw-brand-logo lg">
-              <Activity size={32} className="paw-brand-icon" />
-              <span className="paw-pulse-ping"></span>
-            </div>
-            <h1 className="paw-login-title">
-              Paw<span className="text-gradient-primary">Pulse</span>
-            </h1>
-          </div>
-          <p className="paw-login-subtitle">
-            Enterprise Healthcare Platform & Universal Data Intelligence Suite
-          </p>
-          <div className="paw-tech-stack-pills">
-            <span className="paw-badge badge-indigo">Spring Boot 3</span>
-            <span className="paw-badge badge-cyan">React 18</span>
-            <span className="paw-badge badge-emerald">Bloom Filter Security</span>
-            <span className="paw-badge badge-amber">Google OAuth / SSO</span>
-          </div>
-        </div>
-
-        {/* 2-Option Project Selector */}
+    <div className="paw-login-page" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+      <div className="paw-login-container" style={{ width: '100%', maxWidth: '460px', margin: '0 auto' }}>
+        
+        {/* Top Workspace Mode Toggle */}
         <div
           style={{
-            background: 'rgba(255, 255, 255, 0.03)',
+            display: 'flex',
+            background: 'rgba(255, 255, 255, 0.04)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '14px',
-            padding: '8px',
+            borderRadius: '12px',
+            padding: '4px',
             marginBottom: '20px',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '8px',
           }}
         >
           <button
             type="button"
-            onClick={() => setSelectedWorkspace('csv_dashboard')}
+            onClick={() => setSelectedWorkspace('clinic')}
             style={{
+              flex: 1,
               display: 'flex',
               alignItems: 'center',
-              gap: '12px',
-              padding: '12px 16px',
-              borderRadius: '10px',
-              border: selectedWorkspace === 'csv_dashboard' ? '1px solid #06b6d4' : '1px solid transparent',
-              background: selectedWorkspace === 'csv_dashboard' ? 'rgba(6, 182, 212, 0.15)' : 'transparent',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              border: 'none',
+              background: selectedWorkspace === 'clinic' ? '#6366f1' : 'transparent',
               color: '#fff',
-              textAlign: 'left',
+              fontWeight: 600,
+              fontSize: '0.85rem',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
             }}
           >
-            <div
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <BarChart3 size={20} color="#fff" />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>1. Make Dashboard from CSV/Excel</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Upload any dataset to auto-generate KPIs & charts
-              </div>
-            </div>
+            <Building2 size={16} />
+            <span>PawPulse Clinic</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setSelectedWorkspace('clinic')}
+            onClick={() => navigate('/studio')}
             style={{
+              flex: 1,
               display: 'flex',
               alignItems: 'center',
-              gap: '12px',
-              padding: '12px 16px',
-              borderRadius: '10px',
-              border: selectedWorkspace === 'clinic' ? '1px solid #6366f1' : '1px solid transparent',
-              background: selectedWorkspace === 'clinic' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-              color: '#fff',
-              textAlign: 'left',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'transparent',
+              color: '#94a3b8',
+              fontWeight: 600,
+              fontSize: '0.85rem',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
             }}
           >
-            <div
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <Activity size={20} color="#fff" />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>2. PawPulse Clinic Dashboard</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Clinical ops, vet queue, camera Rx & owner portal
-              </div>
-            </div>
+            <FileSpreadsheet size={16} />
+            <span>CSV/Excel Studio</span>
           </button>
         </div>
 
-        {/* WORKSPACE VIEW 1: CSV / Excel Dashboard Studio Launcher */}
-        {selectedWorkspace === 'csv_dashboard' && (
+        {/* Brand Header */}
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div
-            className="paw-card"
             style={{
-              padding: '24px',
-              marginBottom: '20px',
-              border: '1px solid rgba(6, 182, 212, 0.3)',
-              background: 'radial-gradient(circle at top, rgba(6, 182, 212, 0.08) 0%, rgba(15, 23, 42, 0.8) 100%)',
+              width: '52px',
+              height: '52px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 12px auto',
+              boxShadow: '0 8px 24px rgba(99, 102, 241, 0.35)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-              <FileSpreadsheet size={24} className="text-cyan" />
-              <div>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#fff', margin: 0 }}>
-                  CSV & Excel Auto-Dashboard Studio
-                </h2>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
-                  AI-assisted visual intelligence engine: upload any spreadsheet and ask conversational queries.
-                </p>
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                gap: '10px',
-                marginBottom: '18px',
-              }}
-            >
-              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 14px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Supported Formats</div>
-                <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.85rem' }}>.CSV, .XLSX, .XLS</div>
-              </div>
-              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 14px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Visuals Included</div>
-                <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.85rem' }}>Bar, Line, Area, Pie</div>
-              </div>
-              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 14px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>AI Intelligence</div>
-                <div style={{ fontWeight: 600, color: '#10b981', fontSize: '0.85rem' }}>Conversational Query & Power BI Mode</div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => navigate('/studio')}
-                className="paw-btn paw-btn-primary"
-                style={{
-                  background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
-                  flex: 1,
-                  justifyContent: 'center',
-                  padding: '12px 20px',
-                  fontSize: '0.95rem',
-                }}
-              >
-                <UploadCloud size={18} />
-                <span>Launch Auto-Dashboard Studio</span>
-                <ArrowRight size={16} />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedWorkspace('clinic')}
-                className="paw-btn paw-btn-secondary"
-                style={{ padding: '12px 18px' }}
-              >
-                Go to Clinic Operations
-              </button>
-            </div>
+            <Activity size={28} color="#fff" />
           </div>
-        )}
+          <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#fff', margin: '0 0 6px 0' }}>
+            Paw<span className="text-gradient-primary">Pulse</span>
+          </h1>
+          <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', margin: 0 }}>
+            {mode === 'signin' ? 'Sign in to access your clinic portal' : 'Create a new account to join PawPulse'}
+          </p>
+        </div>
 
-        {/* WORKSPACE VIEW 2: Clinic Operations with Enterprise Login */}
-        {selectedWorkspace === 'clinic' && (
-          <div className="paw-card paw-login-form-card" style={{ padding: '24px', marginBottom: '20px' }}>
-            {/* Top Security Guard Badge: Bloom Filter */}
-            <div
+        {/* Main Authentication Card */}
+        <div
+          className="paw-card"
+          style={{
+            padding: '32px 28px',
+            borderRadius: '16px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'rgba(19, 27, 46, 0.85)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
+          }}
+        >
+          {/* Sign In vs Sign Up Tabs */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '6px',
+              background: 'rgba(255, 255, 255, 0.04)',
+              padding: '4px',
+              borderRadius: '10px',
+              marginBottom: '22px',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setMode('signin');
+                setError('');
+                setSuccessMsg('');
+              }}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 14px',
+                padding: '9px 12px',
                 borderRadius: '8px',
-                background: bloomStats.isCompromised
-                  ? 'rgba(239, 68, 68, 0.12)'
-                  : 'rgba(52, 211, 153, 0.08)',
-                border: bloomStats.isCompromised
-                  ? '1px solid rgba(239, 68, 68, 0.35)'
-                  : '1px solid rgba(52, 211, 153, 0.25)',
-                marginBottom: '18px',
+                border: 'none',
+                background: mode === 'signin' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                color: mode === 'signin' ? '#fff' : 'var(--text-muted)',
+                fontWeight: 600,
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Cpu size={16} className={bloomStats.isCompromised ? 'text-rose' : 'text-emerald'} />
-                <div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#fff' }}>
-                    Bloom Filter Bitset Engine: Active
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                    O(1) hash membership check • {bloomStats.lookupDuration}ms lookup latency • 8,192-bit array
-                  </div>
-                </div>
-              </div>
-              <span className={`paw-badge ${bloomStats.isCompromised ? 'badge-rose' : 'badge-emerald'}`} style={{ fontSize: '0.7rem' }}>
-                {bloomStats.isCompromised ? 'Compromised Pattern' : 'Bitset Verified'}
-              </span>
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('signup');
+                setError('');
+                setSuccessMsg('');
+              }}
+              style={{
+                padding: '9px 12px',
+                borderRadius: '8px',
+                border: 'none',
+                background: mode === 'signup' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                color: mode === 'signup' ? '#fff' : 'var(--text-muted)',
+                fontWeight: 600,
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Create Account
+            </button>
+          </div>
+
+          {/* Real-time Google Sign In Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setError('');
+              setShowGoogleModal(true);
+            }}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              padding: '12px 16px',
+              borderRadius: '10px',
+              background: '#ffffff',
+              color: '#1f2937',
+              border: '1px solid #e5e7eb',
+              fontWeight: 600,
+              fontSize: '0.92rem',
+              cursor: 'pointer',
+              marginBottom: '20px',
+              transition: 'transform 0.15s ease',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+            onMouseOut={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          >
+            {/* Google 4-Color SVG Logo */}
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+            </svg>
+            <span>Continue with Google</span>
+          </button>
+
+          {/* Divider */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              margin: '0 0 20px 0',
+              color: 'var(--text-muted)',
+              fontSize: '0.78rem',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.1)' }}></div>
+            <span>or continue with credentials</span>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.1)' }}></div>
+          </div>
+
+          {/* Error & Success Messages */}
+          {error && (
+            <div className="paw-alert paw-alert-error" style={{ marginBottom: '18px' }}>
+              <AlertCircle size={16} />
+              <span>{error}</span>
             </div>
+          )}
 
-            {/* Google Sign-In & Single-Sign-On Action Buttons */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '18px' }}>
-              <button
-                type="button"
-                onClick={() => setShowGoogleModal(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '12px',
-                  width: '100%',
-                  padding: '12px 18px',
-                  borderRadius: '10px',
-                  background: '#ffffff',
-                  color: '#1f2937',
-                  fontWeight: 600,
-                  fontSize: '0.92rem',
-                  border: '1px solid #e5e7eb',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
-                  transition: 'transform 0.15s ease',
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
-                onMouseOut={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
-              >
-                {/* Official Google 4-Color SVG Logo */}
-                <svg width="20" height="20" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                <span>Continue with Google</span>
-              </button>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('sso')}
-                  className="paw-btn paw-btn-secondary"
-                  style={{ justifyContent: 'center', fontSize: '0.82rem', padding: '10px' }}
-                >
-                  <Globe size={14} />
-                  <span>Enterprise SSO</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => selectDemoRole('admin')}
-                  className="paw-btn paw-btn-secondary"
-                  style={{ justifyContent: 'center', fontSize: '0.82rem', padding: '10px' }}
-                >
-                  <KeyRound size={14} />
-                  <span>1-Click Admin</span>
-                </button>
-              </div>
+          {successMsg && (
+            <div className="paw-alert paw-alert-success" style={{ marginBottom: '18px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#6ee7b7' }}>
+              <CheckCircle2 size={16} />
+              <span>{successMsg}</span>
             </div>
+          )}
 
-            {/* SSO Domain Check Tab (Bloom Filter Domain Check) */}
-            {activeTab === 'sso' && (
-              <form onSubmit={handleSsoCheck} style={{ marginBottom: '18px', padding: '14px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#fff', marginBottom: '6px' }}>
-                  Enterprise Single Sign-On (Okta / Azure AD / SAML 2.0)
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
+          {/* TAB 1: SIGN IN FORM */}
+          {mode === 'signin' && (
+            <form onSubmit={handleSignIn} className="paw-login-form">
+              <div className="paw-form-group">
+                <label className="paw-form-label">Username or Email</label>
+                <div style={{ position: 'relative' }}>
+                  <User size={15} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--text-muted)' }} />
                   <input
                     type="text"
-                    value={ssoDomain}
-                    onChange={(e) => setSsoDomain(e.target.value)}
-                    placeholder="e.g. pawpulse.in or yourcompany.com"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder="e.g. admin or your email"
                     className="paw-form-input"
-                    style={{ flex: 1 }}
+                    style={{ paddingLeft: '36px' }}
                     required
                   />
-                  <button type="submit" className="paw-btn paw-btn-primary">
-                    Verify SSO
-                  </button>
                 </div>
-                {ssoMessage && (
-                  <div style={{ fontSize: '0.78rem', color: '#67e8f9', marginTop: '8px' }}>
-                    {ssoMessage}
-                  </div>
-                )}
-              </form>
-            )}
-
-            <div className="paw-form-divider" style={{ margin: '14px 0' }}>
-              <span>Or sign in with email credentials</span>
-            </div>
-
-            {error && <div className="paw-alert paw-alert-error">{error}</div>}
-
-            {/* Standard Credentials Form with Bloom Filter Validation */}
-            <form onSubmit={handleLogin} className="paw-login-form">
-              <div className="paw-form-group">
-                <label className="paw-form-label">
-                  <Mail size={14} /> Work Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="paw-form-input"
-                  required
-                />
               </div>
 
               <div className="paw-form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label className="paw-form-label" style={{ margin: 0 }}>
-                    <Lock size={14} /> Password
-                  </label>
-                  {password.length > 0 && (
-                    <span
-                      style={{
-                        fontSize: '0.72rem',
-                        color: bloomStats.isCompromised ? '#fb7185' : '#34d399',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      {bloomStats.isCompromised ? (
-                        <>
-                          <AlertTriangle size={12} /> Breached Dictionary Match
-                        </>
-                      ) : (
-                        <>
-                          <Check size={12} /> Bloom Filter Safe
-                        </>
-                      )}
-                    </span>
-                  )}
+                  <label className="paw-form-label" style={{ margin: 0 }}>Password</label>
+                  <button
+                    type="button"
+                    onClick={autoFillMasterAdmin}
+                    style={{ background: 'transparent', border: 'none', color: '#818cf8', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    Use Master Admin
+                  </button>
                 </div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="paw-form-input"
-                  required
-                />
-                {bloomStats.isCompromised && (
-                  <div style={{ fontSize: '0.74rem', color: '#fb7185', marginTop: '6px' }}>
-                    ⚠️ Bloom Filter detected this password in common public leak bitsets. Demo login will still succeed, but this is flagged in production.
+                <div style={{ position: 'relative' }}>
+                  <Lock size={15} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--text-muted)' }} />
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="paw-form-input"
+                    style={{ paddingLeft: '36px' }}
+                    required
+                  />
+                </div>
+                {isBreachedPassword && (
+                  <div style={{ fontSize: '0.72rem', color: '#fb7185', marginTop: '6px' }}>
+                    ⚠️ Bloom Filter: Common dictionary password detected.
                   </div>
                 )}
               </div>
 
-              <button type="submit" className="paw-btn paw-btn-primary w-full" style={{ padding: '12px' }}>
-                Enter Clinical Console
+              <button
+                type="submit"
+                className="paw-btn paw-btn-primary w-full"
+                style={{ padding: '12px', marginTop: '6px' }}
+              >
+                <span>Sign In to Platform</span>
                 <ArrowRight size={16} />
               </button>
             </form>
+          )}
 
-            {/* 1-Click Role Demo Selector Cards */}
-            <div style={{ marginTop: '22px' }}>
-              <div className="paw-demo-label" style={{ marginBottom: '10px' }}>
-                <Sparkles size={14} className="text-accent" />
-                <span>Quick Persona Selector (Instant Reviewer Access):</span>
+          {/* TAB 2: SIGN UP FORM */}
+          {mode === 'signup' && (
+            <form onSubmit={handleSignUp} className="paw-login-form">
+              <div className="paw-form-group">
+                <label className="paw-form-label">Full Name</label>
+                <div style={{ position: 'relative' }}>
+                  <User size={15} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    value={signupName}
+                    onChange={(e) => setSignupName(e.target.value)}
+                    placeholder="e.g. Soham Pandey"
+                    className="paw-form-input"
+                    style={{ paddingLeft: '36px' }}
+                    required
+                  />
+                </div>
               </div>
-              <div className="paw-role-cards-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))' }}>
-                <button
-                  type="button"
-                  onClick={() => selectDemoRole('admin')}
-                  className="paw-role-select-card card-admin"
-                  style={{ padding: '10px' }}
-                >
-                  <Shield size={16} className="text-indigo" />
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#fff', marginTop: '4px' }}>Admin</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Operations</div>
-                </button>
 
-                <button
-                  type="button"
-                  onClick={() => selectDemoRole('coordinator')}
-                  className="paw-role-select-card card-coord"
-                  style={{ padding: '10px' }}
-                >
-                  <GitPullRequest size={16} className="text-amber" />
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#fff', marginTop: '4px' }}>Coordinator</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SLA Pipeline</div>
-                </button>
+              <div className="paw-form-group">
+                <label className="paw-form-label">Email Address</label>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={15} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--text-muted)' }} />
+                  <input
+                    type="email"
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
+                    placeholder="e.g. soham@example.com"
+                    className="paw-form-input"
+                    style={{ paddingLeft: '36px' }}
+                    required
+                  />
+                </div>
+              </div>
 
-                <button
-                  type="button"
-                  onClick={() => selectDemoRole('vet')}
-                  className="paw-role-select-card card-vet"
-                  style={{ padding: '10px' }}
-                >
-                  <Stethoscope size={16} className="text-emerald" />
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#fff', marginTop: '4px' }}>Veterinarian</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Camera Rx</div>
-                </button>
+              <div className="paw-form-group">
+                <label className="paw-form-label">Username (Optional)</label>
+                <input
+                  type="text"
+                  value={signupUsername}
+                  onChange={(e) => setSignupUsername(e.target.value)}
+                  placeholder="e.g. soham"
+                  className="paw-form-input"
+                />
+              </div>
 
-                <button
-                  type="button"
-                  onClick={() => selectDemoRole('owner')}
-                  className="paw-role-select-card card-owner"
-                  style={{ padding: '10px' }}
+              <div className="paw-form-group">
+                <label className="paw-form-label">Create Password</label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={15} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--text-muted)' }} />
+                  <input
+                    type="password"
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    placeholder="Choose a strong password"
+                    className="paw-form-input"
+                    style={{ paddingLeft: '36px' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="paw-form-group">
+                <label className="paw-form-label">Account Role</label>
+                <select
+                  value={signupRole}
+                  onChange={(e) => setSignupRole(e.target.value)}
+                  className="paw-form-select"
                 >
-                  <Heart size={16} className="text-rose" />
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#fff', marginTop: '4px' }}>Pet Parent</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Pet Locker</div>
-                </button>
+                  <option value="OWNER">Pet Parent (Pet Health Records & Booking)</option>
+                  <option value="VET">Veterinarian (Consultation Queue & Camera Rx)</option>
+                  <option value="COORDINATOR">Care Coordinator (SLA Pipeline & Referrals)</option>
+                  <option value="ADMIN">Clinic Operations Admin (Full Management)</option>
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                className="paw-btn paw-btn-primary w-full"
+                style={{ padding: '12px', marginTop: '6px' }}
+              >
+                <span>Create Account & Sign In</span>
+                <ArrowRight size={16} />
+              </button>
+            </form>
+          )}
+
+          {/* Master Admin Help Callout */}
+          <div
+            style={{
+              marginTop: '22px',
+              padding: '12px 16px',
+              borderRadius: '10px',
+              background: 'rgba(99, 102, 241, 0.08)',
+              border: '1px solid rgba(99, 102, 241, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '10px',
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#a5b4fc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <KeyRound size={13} />
+                <span>Master Admin Credentials:</span>
+              </div>
+              <div style={{ fontSize: '0.74rem', color: '#cbd5e1', marginTop: '2px' }}>
+                User: <strong>admin</strong> | Password: <strong>admin123</strong>
               </div>
             </div>
-          </div>
-        )}
 
-        <div className="paw-login-footer">
-          <CheckCircle2 size={14} className="text-emerald" />
-          <span>Bloom filter hashing active. Fast zero-latency pre-check with sub-millisecond evaluation.</span>
+            <button
+              type="button"
+              onClick={autoFillMasterAdmin}
+              className="paw-btn paw-btn-xs paw-btn-secondary"
+              style={{ fontSize: '0.72rem', whiteSpace: 'nowrap' }}
+            >
+              1-Click Fill
+            </button>
+          </div>
+        </div>
+
+        {/* Footer info */}
+        <div style={{ textAlign: 'center', marginTop: '18px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+          🔒 Multi-Role RBAC & Bloom Filter verification active
         </div>
       </div>
 
-      {/* Google OAuth Simulation Modal */}
+      {/* Google Sign In Real-Time Modal */}
       {showGoogleModal && (
         <div
           style={{
@@ -593,7 +554,7 @@ export default function LoginPage() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '20px',
-            backdropFilter: 'blur(5px)',
+            backdropFilter: 'blur(6px)',
           }}
           onClick={() => setShowGoogleModal(false)}
         >
@@ -601,11 +562,11 @@ export default function LoginPage() {
             style={{
               background: '#ffffff',
               borderRadius: '16px',
-              padding: '24px',
+              padding: '28px 24px',
               width: '100%',
               maxWidth: '420px',
               color: '#1f2937',
-              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -617,7 +578,7 @@ export default function LoginPage() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                 </svg>
-                <div style={{ fontWeight: 600, fontSize: '1.05rem', color: '#111827' }}>
+                <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#111827' }}>
                   Sign in with Google
                 </div>
               </div>
@@ -630,131 +591,75 @@ export default function LoginPage() {
               </button>
             </div>
 
-            <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: '0 0 16px 0' }}>
-              Choose an authorized Google account to continue to <strong>PawPulse Enterprise</strong>:
+            <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: '0 0 18px 0', lineHeight: 1.4 }}>
+              Enter any Google or Gmail address you wish to sign in with:
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div
-                onClick={() => handleGoogleSelect({ name: 'Soham Pandey', email: 'sohampandey670@gmail.com', role: 'ADMIN' })}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px',
-                  borderRadius: '10px',
-                  border: '1px solid #e5e7eb',
-                  cursor: 'pointer',
-                  transition: 'background 0.15s ease',
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.background = '#f9fafb')}
-                onMouseOut={(e) => (e.currentTarget.style.background = '#ffffff')}
-              >
-                <div
+            <form onSubmit={handleGoogleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px' }}>
+                  Google / Gmail Address
+                </label>
+                <input
+                  type="email"
+                  value={customGmail}
+                  onChange={(e) => setCustomGmail(e.target.value)}
+                  placeholder="your.email@gmail.com"
                   style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '50%',
-                    background: '#6366f1',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                    fontSize: '0.9rem',
+                    color: '#111827',
+                    outline: 'none',
                   }}
-                >
-                  SP
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#111827' }}>Soham Pandey</div>
-                  <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>sohampandey670@gmail.com</div>
-                </div>
-                <span style={{ fontSize: '0.72rem', background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
-                  Admin
-                </span>
+                  required
+                  autoFocus
+                />
               </div>
 
-              <div
-                onClick={() => handleGoogleSelect({ name: 'Dr. Ananya Sharma', email: 'dr.ananya@pawcare.org', role: 'VET' })}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px',
-                  borderRadius: '10px',
-                  border: '1px solid #e5e7eb',
-                  cursor: 'pointer',
-                  transition: 'background 0.15s ease',
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.background = '#f9fafb')}
-                onMouseOut={(e) => (e.currentTarget.style.background = '#ffffff')}
-              >
-                <div
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px' }}>
+                  Your Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={customGoogleName}
+                  onChange={(e) => setCustomGoogleName(e.target.value)}
+                  placeholder="e.g. Soham Pandey"
                   style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '50%',
-                    background: '#10b981',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                    fontSize: '0.9rem',
+                    color: '#111827',
+                    outline: 'none',
                   }}
-                >
-                  AS
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#111827' }}>Dr. Ananya Sharma</div>
-                  <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>dr.ananya@pawcare.org</div>
-                </div>
-                <span style={{ fontSize: '0.72rem', background: '#d1fae5', color: '#065f46', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
-                  Vet
-                </span>
+                />
               </div>
 
-              <div
-                onClick={() => handleGoogleSelect({ name: 'Vikram Singh', email: 'vikram.singh@pawpulse.in', role: 'COORDINATOR' })}
+              <button
+                type="submit"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
+                  background: '#1a73e8',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
                   padding: '12px',
-                  borderRadius: '10px',
-                  border: '1px solid #e5e7eb',
+                  fontWeight: 600,
+                  fontSize: '0.92rem',
                   cursor: 'pointer',
-                  transition: 'background 0.15s ease',
+                  marginTop: '8px',
                 }}
-                onMouseOver={(e) => (e.currentTarget.style.background = '#f9fafb')}
-                onMouseOut={(e) => (e.currentTarget.style.background = '#ffffff')}
               >
-                <div
-                  style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '50%',
-                    background: '#f59e0b',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                  }}
-                >
-                  VS
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#111827' }}>Vikram Singh</div>
-                  <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>vikram.singh@pawpulse.in</div>
-                </div>
-                <span style={{ fontSize: '0.72rem', background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
-                  Coordinator
-                </span>
-              </div>
-            </div>
+                Continue as Google User
+              </button>
+            </form>
 
-            <div style={{ borderTop: '1px solid #f3f4f6', marginTop: '16px', paddingTop: '14px', textAlign: 'center', fontSize: '0.78rem', color: '#9ca3af' }}>
-              🔒 Protected by 256-bit OAuth SSL & Client-Side Bloom Filter Verification
+            <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f3f4f6', fontSize: '0.75rem', color: '#9ca3af', textAlign: 'center' }}>
+              🔒 Directly creates session for your Gmail without hardcoded previews
             </div>
           </div>
         </div>
