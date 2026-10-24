@@ -8,29 +8,33 @@
 
 PawPulse is an enterprise-grade full-stack operations and clinical analytics platform designed for veterinary hospital networks, mobile clinics, and teleconsultation hubs.
 
+**Live Frontend (Vercel)**: [https://pawpulse-sohams-projects-011c1ac2.vercel.app](https://pawpulse-sohams-projects-011c1ac2.vercel.app)  
+**Live Backend API (Render)**: [https://pawpulse-v1df.onrender.com](https://pawpulse-v1df.onrender.com)  
+**Database (Supabase)**: Managed PostgreSQL 15 on AWS Mumbai Pooler
+
 ---
 
 ## 🏗️ Architecture Overview
 
 ```mermaid
 graph TB
-    subgraph "Frontend Layer (React 18 + Vite)"
+    subgraph "Frontend Layer (React 18 + Vite on Vercel)"
         A["Executive Admin Dashboard"]
         B["Care Coordinator SLA Console"]
         C["Veterinary Clinical Desk"]
         D["Pet Parent Portal & Booking"]
     end
 
-    subgraph "Backend API (Spring Boot 3 + Java 17)"
+    subgraph "Backend API (Spring Boot 3 on Render)"
         E["JWT Auth & Security Filter"]
-        F["REST Controllers"]
+        F["REST Controllers (Pet, Appointment, Dashboard, Auth)"]
         G["Spring Data JPA / Hibernate"]
     end
 
-    subgraph "Database Layer (PostgreSQL 15)"
+    subgraph "Database Layer (Supabase PostgreSQL 15)"
         H["Relational Tables (UUIDs, FKs)"]
         I["Analytical Views (7D Moving Avg, SLA Breaches)"]
-        J["5,000+ Synthetic Event Records"]
+        J["Startup Seed (5 Pets) / Enterprise Seed (5,500+ records)"]
     end
 
     subgraph "Analytics & BI Layer"
@@ -53,20 +57,21 @@ graph TB
 pawpulse/
 ├── backend/                       # Spring Boot 3 Java Backend
 │   ├── src/main/java/com/pawpulse/
-│   │   ├── config/                # SecurityConfig, JwtFilter, JwtUtil
-│   │   ├── controller/            # Dashboard, Appointment, Auth Controllers
-│   │   ├── dto/                   # DTOs
-│   │   ├── entity/                # Appointment, Clinic, Owner, Payment, Pet, etc.
-│   │   ├── repository/            # JPA Repositories
+│   │   ├── config/                # SecurityConfig, DatabaseConfig, JwtFilter, JwtUtil
+│   │   ├── controller/            # PetController (/api/pets), DashboardController, AppointmentController, AuthController
+│   │   ├── dto/                   # Request & Response DTOs
+│   │   ├── entity/                # Appointment, Clinic, Owner, Payment, Pet, Vet, Referral, Prescription
+│   │   ├── repository/            # JPA Repositories (PetRepository, AppointmentRepository, etc.)
 │   │   └── service/               # DashboardService, AuthService
 │   ├── src/main/resources/
 │   │   ├── application.yml        # Dev (H2) and Prod (PostgreSQL) configurations
 │   │   └── data.sql               # Dev seed data
+│   ├── Dockerfile                 # Multi-stage production container build
 │   └── pom.xml
 │
 ├── frontend/                      # React 18 + Vite Single Page Application
 │   ├── src/
-│   │   ├── components/            # Sidebar, Navbar, Layout, ProtectedRoute
+│   │   ├── components/            # Sidebar (Live status badge), Navbar, Layout, ProtectedRoute
 │   │   ├── context/               # AuthContext with 1-click persona demo logins
 │   │   ├── data/                  # syntheticData.js (high-fidelity fallback datasets)
 │   │   ├── pages/
@@ -74,11 +79,12 @@ pawpulse/
 │   │   │   ├── AdminDashboard.jsx # 15 KPIs, Recharts charts, Leaderboards
 │   │   │   ├── CoordinatorView.jsx# Referral SLA pipeline & Rx follow-up desk
 │   │   │   ├── VetConsole.jsx     # Consult queue & digital Rx generator
-│   │   │   ├── OwnerPortal.jsx    # Pet profiles & treatment plans
+│   │   │   ├── OwnerPortal.jsx    # Live pet parent records & treatment plans
 │   │   │   ├── BookingPage.jsx    # Interactive booking wizard
 │   │   │   └── AppointmentsPage.jsx # Multi-filtered master log
-│   │   ├── services/              # api.js with JWT interceptor & demo fallback
+│   │   ├── services/              # api.js with JWT interceptor & baseURL normalization
 │   │   └── index.css              # Dark Glassmorphism Design System
+│   ├── vercel.json                # Single page app routing rewrites
 │   └── package.json
 │
 ├── sql/                           # PostgreSQL Database & Analytics
@@ -86,6 +92,8 @@ pawpulse/
 │   ├── 02_kpi_views.sql           # Real-time analytical SQL views
 │   ├── 03_advanced_analytics.sql  # Window functions, LAG, DENSE_RANK, CTEs
 │   ├── 04_seed_data.sql           # 5,000+ realistic rows of clinical events
+│   ├── supabase_setup.sql         # Full cloud database setup script
+│   ├── startup_seed.sql           # Clean 5-pet startup dataset with valid hex UUIDs
 │   └── generate_seed_sql.py       # Python generator for seed data
 │
 ├── powerbi/                       # Power BI Desktop Assets

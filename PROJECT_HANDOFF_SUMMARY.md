@@ -61,6 +61,24 @@ PawPulse was engineered as a production-ready, full-stack veterinary operations 
 * **What was done**: Copied the entire project to `C:\Users\soham\Desktop\pawpulse` and verified that Git remote tracking, commits, and dependencies are intact.
 * **Why**: The original working directory was inside a hidden folder (`.gemini/antigravity-ide/scratch`). Moving it to the Desktop allows direct access in Windows File Explorer and VS Code.
 
+### Phase 9: Live Cloud Database Connection (Supabase IPv4 Pooler)
+* **What was done**:
+  1. Diagnosed `UnknownHostException` between Render and Supabase (Render is IPv4-only, direct Supabase is IPv6-only). Connected Render to Supabase's IPv4 Session Pooler on port `5432` (`aws-0-ap-south-1.pooler.supabase.com:5432`).
+  2. Implemented [DatabaseConfig.java](file:///C:/Users/soham/Desktop/pawpulse/backend/src/main/java/com/pawpulse/config/DatabaseConfig.java) with intelligent regex URL parsing to support direct, pooler, and standard JDBC strings seamlessly.
+* **Why**: To establish permanent cloud database persistence with zero connection errors and clean Hikari connection pooling.
+
+### Phase 10: PetController & Dynamic Frontend Synchronization
+* **What was done**:
+  1. Created [PetController.java](file:///C:/Users/soham/Desktop/pawpulse/backend/src/main/java/com/pawpulse/controller/PetController.java) exposing `/api/pets` (`GET /api/pets`, `GET /api/pets/{id}`, `GET /api/pets/owner/{ownerId}`).
+  2. Updated [SecurityConfig.java](file:///C:/Users/soham/Desktop/pawpulse/backend/src/main/java/com/pawpulse/config/SecurityConfig.java) to allow public read access for `/api/pets/**`, `/api/appointments/**`, and `/api/dashboard/**`.
+  3. Updated [frontend/src/services/api.js](file:///C:/Users/soham/Desktop/pawpulse/frontend/src/services/api.js) to normalize `API_BASE_URL` with `/api` and increased request timeout to 10s.
+  4. Updated [Sidebar.jsx](file:///C:/Users/soham/Desktop/pawpulse/frontend/src/components/Sidebar.jsx) with dynamic connection badge (`● Live PostgreSQL Active` vs `Synthetic Demo Active`).
+* **Why**: The frontend was previously serving offline demo fallback data. Connecting `PetController` directly to `PetRepository` allows manual Supabase edits (like editing pet name to "balls") to instantly reflect live on the web UI.
+
+### Phase 11: Startup Seed Dataset & Schema Clarity
+* **What was done**: Created [sql/startup_seed.sql](file:///C:/Users/soham/Desktop/pawpulse/sql/startup_seed.sql) with 100% valid hexadecimal UUIDs: 2 clinics, 2 vets, 4 owners, 5 distinct patient pets (`balls`, `Luna`, `Rocky`, `Whiskers`, `Charlie`), and 20 monthly appointments.
+* **Why**: The initial 300+ random seed script had confusing duplicate names across cats and dogs. The startup dataset gives the user an intuitive, clean, easy-to-understand dataset matching an early-stage veterinary clinic.
+
 ---
 
 ## 3. Directory & Deliverables Inventory

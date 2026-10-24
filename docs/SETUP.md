@@ -110,13 +110,28 @@ curl http://localhost:8080/
 | :--- | :--- | :--- |
 | `VITE_API_URL` | Base URL of the Spring Boot backend API | `https://pawpulse-v1df.onrender.com` |
 
+*Note: In Vite, environment variables are embedded at build time. Trigger a redeploy after modifying this variable.*
+
 ### Backend (`backend/src/main/resources/application.yml` or Render Environment Variables)
 | Variable | Description | Default / Example |
 | :--- | :--- | :--- |
 | `PORT` | HTTP port assigned dynamically by cloud provider | `8080` (Local) / `10000` (Render) |
-| `DATABASE_URL` | JDBC URL for PostgreSQL connection | `jdbc:postgresql://host:5432/pawpulse` |
+| `DATABASE_URL` | Supabase IPv4 connection pooler URL | `postgresql://postgres.[PROJECT_ID]:[PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:5432/postgres` |
 | `SPRING_PROFILES_ACTIVE` | Spring configuration profile | `prod` (PostgreSQL) / unset (H2) |
-| `JWT_SECRET` | 256-bit secret key for signing tokens | `PawPulseSecretKeyForJWTToken...` |
+| `JWT_SECRET` | 256-bit secret key for signing tokens | `PawPulseSecretKeyForJWTTokenMustBeAtLeast256BitsLong2024!` |
+
+---
+
+## 4. Database Setup & Startup Dataset Seeding
+
+PawPulse includes two database configurations:
+1. **Clean Startup Mode (Recommended for testing & learning)**:
+   * Open Supabase SQL Editor (`>_`).
+   * Paste and run [`sql/startup_seed.sql`](file:///C:/Users/soham/Desktop/pawpulse/sql/startup_seed.sql).
+   * Populates **5 distinct pets** (`balls`, `Luna`, `Rocky`, `Whiskers`, `Charlie`), 4 owners, 2 clinics, 2 vets, and 20 monthly bookings with 100% valid hexadecimal UUIDs.
+2. **High-Volume Enterprise Mode (5,500+ records)**:
+   * Run [`sql/supabase_setup.sql`](file:///C:/Users/soham/Desktop/pawpulse/sql/supabase_setup.sql).
+   * Populates full synthetic operations dataset for multi-year stress testing.
 
 ---
 

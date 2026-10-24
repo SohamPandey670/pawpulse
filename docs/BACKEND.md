@@ -161,19 +161,21 @@ CREATE INDEX idx_payments_status_amount ON payments(status, amount);
 
 ### 3.1 Core Module Structure
 * **`config/`**:
-  * `SecurityConfig.java`: Spring Security 6 filter chain, CORS origin patterns, method-level security.
+  * `SecurityConfig.java`: Spring Security 6 filter chain, CORS origin patterns, method-level security. Public read access permitted for `/api/pets/**`, `/api/appointments/**`, `/api/dashboard/**`.
+  * `DatabaseConfig.java`: Resilient DataSource configuration featuring regex URL parsing supporting Supabase direct, IPv4 connection poolers (`aws-0-ap-south-1.pooler.supabase.com:5432`), and standard JDBC formats.
   * `JwtUtil.java`: Token generation, validation, and claim parsing using HMAC-SHA256.
   * `JwtFilter.java`: OncePerRequestFilter parsing `Authorization: Bearer` headers.
 * **`controller/`**:
   * `HomeController.java`: Health and root status endpoint (`GET /`).
   * `AuthController.java`: Login verification (`POST /api/auth/login`) and health check (`GET /api/auth/health`).
-  * `DashboardController.java`: Aggregated executive KPIs and clinic telemetry (`GET /api/dashboard/kpi`).
-  * `AppointmentController.java`: CRUD endpoints for scheduling and triage.
+  * `DashboardController.java`: Aggregated executive KPIs and clinic telemetry (`GET /api/dashboard`).
+  * `AppointmentController.java`: CRUD endpoints for scheduling and triage (`/api/appointments`).
+  * `PetController.java`: Patient pet query and management endpoints (`GET /api/pets`, `GET /api/pets/{id}`, `GET /api/pets/owner/{ownerId}`).
 * **`service/`**:
   * `AuthService.java`: BCrypt credential verification and JWT dispatch.
   * `DashboardService.java`: High-performance SQL queries for financial and clinical KPIs.
 * **`repository/`**:
-  * Spring Data JPA interfaces extending `JpaRepository<T, UUID>` with custom JPQL queries.
+  * Spring Data JPA interfaces extending `JpaRepository<T, UUID>` with custom JPQL queries (`PetRepository`, `AppointmentRepository`, `VetRepository`, `OwnerRepository`, etc.).
 
 ### 3.2 Running & Testing Locally
 ```powershell

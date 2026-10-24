@@ -255,3 +255,49 @@ Accept: application/json
   "slaDeadline": "2026-10-21T02:00:00Z"
 }
 ```
+
+---
+
+### 2.7 Pet Management Module
+
+#### `GET /api/pets`
+* **Purpose**: Retrieve all registered patient pets with clinical metadata and owner information.
+* **Auth**: Public / `ADMIN`, `OWNER`, `VET`
+* **Query Parameters**:
+  * `limit` *(int, optional, default: 50)*: Number of records to return.
+* **Response `200 OK`**:
+```json
+[
+  {
+    "id": "44444444-4444-4444-4444-444444444401",
+    "name": "balls",
+    "species": "dog",
+    "breed": "Golden Retriever",
+    "dob": "2022-03-15",
+    "weightKg": 31.5,
+    "ownerId": "33333333-3333-3333-3333-333333333301",
+    "ownerName": "Rahul Mehta"
+  },
+  {
+    "id": "44444444-4444-4444-4444-444444444402",
+    "name": "Luna",
+    "species": "cat",
+    "breed": "Persian",
+    "dob": "2023-05-10",
+    "weightKg": 4.2,
+    "ownerId": "33333333-3333-3333-3333-333333333302",
+    "ownerName": "Pooja Verma"
+  }
+]
+```
+
+#### `GET /api/pets/{id}`
+* **Purpose**: Retrieve single pet details by UUID.
+* **Auth**: Public / `ADMIN`, `OWNER`, `VET`
+* **Response `200 OK`**: Single pet JSON object.
+
+#### `GET /api/pets/owner/{ownerId}`
+* **Purpose**: Retrieve all pets belonging to a specific owner.
+* **Auth**: Public / `OWNER`, `ADMIN`
+* **Response `200 OK`**: Array of pets belonging to that owner.
+
