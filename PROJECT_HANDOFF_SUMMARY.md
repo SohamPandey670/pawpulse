@@ -1,7 +1,7 @@
 # PawPulse — Master Project Handoff & Conversation Summary
 
 **Project Name**: PawPulse — Multi-Clinic Pet Healthcare Operations, Telehealth & Clinical Intelligence Platform  
-**Developer / Owner**: Soham Kr Pandey (`sohampandey670@gmail.com`)  
+**Engineering Lead**: Principal Full-Stack Engineering Team  
 **Repository**: [https://github.com/SohamPandey670/pawpulse](https://github.com/SohamPandey670/pawpulse)  
 **Live Frontend**: [https://pawpulse-sohams-projects-011c1ac2.vercel.app](https://pawpulse-sohams-projects-011c1ac2.vercel.app)  
 **Live Backend API**: [https://pawpulse-v1df.onrender.com](https://pawpulse-v1df.onrender.com)  

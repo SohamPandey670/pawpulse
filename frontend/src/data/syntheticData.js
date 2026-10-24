@@ -135,7 +135,7 @@ export const demoUsers = {
   admin: {
     email: 'admin@pawpulse.in',
     password: 'admin123',
-    name: 'Dr. Soham (Admin)',
+    name: 'Operations Admin',
     role: 'ADMIN',
   },
   coordinator: {

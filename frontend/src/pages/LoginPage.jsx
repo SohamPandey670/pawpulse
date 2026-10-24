@@ -425,7 +425,7 @@ export default function LoginPage() {
                     type="text"
                     value={signupName}
                     onChange={(e) => setSignupName(e.target.value)}
-                    placeholder="e.g. Soham Pandey"
+                    placeholder="Your Full Name"
                     className="paw-form-input"
                     style={{ paddingLeft: '36px' }}
                     required
@@ -441,7 +441,7 @@ export default function LoginPage() {
                     type="email"
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
-                    placeholder="e.g. soham@example.com"
+                    placeholder="name@example.com"
                     className="paw-form-input"
                     style={{ paddingLeft: '36px' }}
                     required
@@ -455,7 +455,7 @@ export default function LoginPage() {
                   type="text"
                   value={signupUsername}
                   onChange={(e) => setSignupUsername(e.target.value)}
-                  placeholder="e.g. soham"
+                  placeholder="username"
                   className="paw-form-input"
                 />
               </div>
@@ -627,7 +627,7 @@ export default function LoginPage() {
                   type="text"
                   value={customGoogleName}
                   onChange={(e) => setCustomGoogleName(e.target.value)}
-                  placeholder="e.g. Soham Pandey"
+                  placeholder="Your Name"
                   style={{
                     width: '100%',
                     padding: '10px 14px',
