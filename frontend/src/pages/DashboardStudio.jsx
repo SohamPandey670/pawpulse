@@ -2,6 +2,11 @@ import { useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import {
+  profileDataset,
+  generateSmartSuggestions,
+  executeDataQuery,
+} from '../utils/aiDataEngine';
+import {
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -37,12 +42,20 @@ import {
   Hash,
   Database,
   Building2,
+  Bot,
+  Send,
+  HelpCircle,
+  CheckCircle2,
+  AlertCircle,
+  ChevronDown,
+  X,
+  Play,
 } from 'lucide-react';
 
 const PALETTE = ['#818cf8', '#22d3ee', '#34d399', '#fbbf24', '#fb7185', '#a78bfa', '#38bdf8', '#4ade80'];
 
-// Pre-packaged realistic sample datasets for instant 1-click testing
-const SAMPLE_DATASETS = {
+// Pre-packaged sample datasets available on demand (NOT preloaded by default)
+const OPTIONAL_SAMPLES = {
   clinicSales: {
     name: 'Clinic_Monthly_Revenue_2026.xlsx',
     data: [
@@ -60,103 +73,104 @@ const SAMPLE_DATASETS = {
       { Month: '2026-03', Clinic: 'PetFirst Bangalore', Service: 'Home Visit', Bookings: 95, Revenue: 85500, Rating: 4.9 },
     ],
   },
-  ecommerce: {
+  retailOrders: {
     name: 'Pet_Products_Orders.csv',
     data: [
-      { Category: 'Dog Food & Nutrition', Region: 'West India', UnitsSold: 420, GrossSales: 315000, Profit: 78000 },
-      { Category: 'Cat Supplements', Region: 'West India', UnitsSold: 280, GrossSales: 168000, Profit: 45000 },
-      { Category: 'Anti-Tick & Grooming', Region: 'South India', UnitsSold: 510, GrossSales: 229500, Profit: 68000 },
-      { Category: 'Surgical & Ortho Aids', Region: 'North India', UnitsSold: 95, GrossSales: 285000, Profit: 85500 },
-      { Category: 'Dog Food & Nutrition', Region: 'South India', UnitsSold: 390, GrossSales: 292500, Profit: 72000 },
-      { Category: 'Cat Supplements', Region: 'South India', UnitsSold: 310, GrossSales: 186000, Profit: 52000 },
-      { Category: 'Toys & Behavioral', Region: 'West India', UnitsSold: 640, GrossSales: 160000, Profit: 48000 },
-      { Category: 'Vaccines & Cold Chain', Region: 'North India', UnitsSold: 180, GrossSales: 360000, Profit: 108000 },
+      { OrderID: 'ORD-101', Category: 'Medicines', Product: 'Flea & Tick Spray', Units: 42, UnitPrice: 650, DiscountPct: 5, TotalAmount: 25935, CustomerCity: 'Mumbai' },
+      { OrderID: 'ORD-102', Category: 'Supplements', Product: 'Omega 3 Fish Oil', Units: 85, UnitPrice: 850, DiscountPct: 10, TotalAmount: 65025, CustomerCity: 'Delhi' },
+      { OrderID: 'ORD-103', Category: 'Medicines', Product: 'Canine Antibiotics', Units: 31, UnitPrice: 420, DiscountPct: 0, TotalAmount: 13020, CustomerCity: 'Bangalore' },
+      { OrderID: 'ORD-104', Category: 'Grooming', Product: 'Herbal Shampoo', Units: 110, UnitPrice: 380, DiscountPct: 15, TotalAmount: 35530, CustomerCity: 'Pune' },
+      { OrderID: 'ORD-105', Category: 'Food & Nutrition', Product: 'Puppy Kibble 10kg', Units: 65, UnitPrice: 2400, DiscountPct: 8, TotalAmount: 143520, CustomerCity: 'Hyderabad' },
+      { OrderID: 'ORD-106', Category: 'Supplements', Product: 'Joint Support Tablets', Units: 54, UnitPrice: 950, DiscountPct: 12, TotalAmount: 45144, CustomerCity: 'Mumbai' },
+      { OrderID: 'ORD-107', Category: 'Grooming', Product: 'Nail Grinder Pro', Units: 28, UnitPrice: 1200, DiscountPct: 5, TotalAmount: 31920, CustomerCity: 'Bangalore' },
+      { OrderID: 'ORD-108', Category: 'Medicines', Product: 'Eye & Ear Drops', Units: 73, UnitPrice: 290, DiscountPct: 0, TotalAmount: 21170, CustomerCity: 'Chennai' },
     ],
   },
 };
 
 export default function DashboardStudio() {
-  const [fileName, setFileName] = useState('Clinic_Monthly_Revenue_2026.xlsx');
-  const [rawRows, setRawRows] = useState(SAMPLE_DATASETS.clinicSales.data);
-  const [selectedSheet, setSelectedSheet] = useState('');
-  const [availableSheets, setAvailableSheets] = useState([]);
-  const [chartType, setChartType] = useState('bar'); // 'bar', 'line', 'area', 'pie'
-  const [xAxisCol, setXAxisCol] = useState('');
-  const [yAxisCol, setYAxisCol] = useState('');
-  const [aggMode, setAggMode] = useState('sum'); // 'sum', 'avg', 'count'
-  const [searchQuery, setSearchQuery] = useState('');
+  // 100% EMPTY by default as requested
+  const [data, setData] = useState(null);
+  const [fileName, setFileName] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // AI Prompt State
+  const [userQuery, setUserQuery] = useState('');
+  const [queryResult, setQueryResult] = useState(null);
+  const [clarificationPrompt, setClarificationPrompt] = useState(null);
+
+  // Manual Controls Override
+  const [selectedX, setSelectedX] = useState('');
+  const [selectedY, setSelectedY] = useState('');
+  const [selectedAgg, setSelectedAgg] = useState('sum');
+  const [chartType, setChartType] = useState('bar');
+
+  // Search & Table Explorer
+  const [tableSearch, setTableSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 8;
+  const rowsPerPage = 10;
+
   const fileInputRef = useRef(null);
 
-  // Column inspection
-  const columns = useMemo(() => {
-    if (!rawRows || rawRows.length === 0) return [];
-    return Object.keys(rawRows[0]);
-  }, [rawRows]);
+  // Profile Dataset with AI Engine
+  const profile = useMemo(() => {
+    if (!data || data.length === 0) return null;
+    return profileDataset(data);
+  }, [data]);
 
-  const columnTypes = useMemo(() => {
-    const types = {};
-    columns.forEach((col) => {
-      let isNumeric = true;
-      let count = 0;
-      for (const row of rawRows) {
-        if (row[col] !== null && row[col] !== undefined && row[col] !== '') {
-          count++;
-          if (typeof row[col] !== 'number' && isNaN(Number(row[col]))) {
-            isNumeric = false;
-            break;
-          }
-        }
-      }
-      types[col] = count > 0 && isNumeric ? 'number' : 'string';
-    });
-    return types;
-  }, [columns, rawRows]);
+  // Smart Suggestions based on detected fields
+  const suggestions = useMemo(() => {
+    if (!profile) return [];
+    return generateSmartSuggestions(profile);
+  }, [profile]);
 
-  const numericCols = useMemo(() => {
-    return columns.filter((c) => columnTypes[c] === 'number');
-  }, [columns, columnTypes]);
-
-  const categoricalCols = useMemo(() => {
-    return columns.filter((c) => columnTypes[c] !== 'number');
-  }, [columns, columnTypes]);
-
-  // Default axes on first load or file change
-  useMemo(() => {
-    if (columns.length > 0) {
-      if (!xAxisCol || !columns.includes(xAxisCol)) {
-        setXAxisCol(categoricalCols[0] || columns[0]);
-      }
-      if (!yAxisCol || !columns.includes(yAxisCol)) {
-        setYAxisCol(numericCols[0] || columns[1] || columns[0]);
-      }
-    }
-  }, [columns, numericCols, categoricalCols, xAxisCol, yAxisCol]);
-
-  // Handle uploaded Excel / CSV File
-  const handleFileUpload = (file) => {
+  // File Upload Parser (SheetJS xlsx & csv)
+  const processRawFile = (file) => {
     if (!file) return;
-    setFileName(file.name);
+    setIsProcessing(true);
+    setErrorMessage('');
+    setQueryResult(null);
+    setClarificationPrompt(null);
 
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetNames = workbook.SheetNames;
-        setAvailableSheets(sheetNames);
-        const firstSheet = sheetNames[0];
-        setSelectedSheet(firstSheet);
-        const worksheet = workbook.Sheets[firstSheet];
-        const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-        if (json && json.length > 0) {
-          setRawRows(json);
-          setCurrentPage(1);
+        const buffer = e.target.result;
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheetName];
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+        if (!json || json.length === 0) {
+          setErrorMessage('Uploaded spreadsheet appears empty or contains no data rows.');
+          setIsProcessing(false);
+          return;
+        }
+
+        setData(json);
+        setFileName(file.name);
+
+        // Auto-run first smart query
+        const autoProfile = profileDataset(json);
+        if (autoProfile) {
+          const autoSuggestions = generateSmartSuggestions(autoProfile);
+          if (autoSuggestions.length > 0) {
+            const first = autoSuggestions[0];
+            setSelectedX(first.dimension);
+            setSelectedY(first.metric);
+            setSelectedAgg(first.agg);
+            setChartType(first.chartType);
+            const res = executeDataQuery(first.query, json, autoProfile, first);
+            setQueryResult(res);
+          }
         }
       } catch (err) {
-        alert('Could not parse file. Please upload a valid CSV or XLSX file.');
-        console.error(err);
+        console.error('File parse error:', err);
+        setErrorMessage('Failed to parse file. Please verify it is a valid .csv, .xlsx, or .xls document.');
+      } finally {
+        setIsProcessing(false);
       }
     };
     reader.readAsArrayBuffer(file);
@@ -164,583 +178,827 @@ export default function DashboardStudio() {
 
   const handleDrop = (e) => {
     e.preventDefault();
+    setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileUpload(e.dataTransfer.files[0]);
+      processRawFile(e.dataTransfer.files[0]);
     }
   };
 
-  // Instant calculated KPIs
-  const kpiStats = useMemo(() => {
-    const totalRows = rawRows.length;
-    if (totalRows === 0) return { totalRows: 0, metric1: null, metric2: null };
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setDragActive(true);
+  };
 
-    const m1 = numericCols[0] || null;
-    const m2 = numericCols[1] || null;
+  const handleDragLeave = () => {
+    setDragActive(false);
+  };
 
-    const calcSum = (col) =>
-      rawRows.reduce((acc, r) => acc + (Number(r[col]) || 0), 0);
+  const handleFileSelect = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      processRawFile(e.target.files[0]);
+    }
+  };
 
-    return {
-      totalRows,
-      metric1: m1
-        ? {
-            label: m1,
-            sum: Math.round(calcSum(m1)),
-            avg: Math.round((calcSum(m1) / totalRows) * 10) / 10,
-          }
-        : null,
-      metric2: m2
-        ? {
-            label: m2,
-            sum: Math.round(calcSum(m2)),
-            avg: Math.round((calcSum(m2) / totalRows) * 10) / 10,
-          }
-        : null,
-    };
-  }, [rawRows, numericCols]);
+  const loadSample = (sampleKey) => {
+    const sample = OPTIONAL_SAMPLES[sampleKey];
+    if (!sample) return;
+    setData(sample.data);
+    setFileName(sample.name);
+    setErrorMessage('');
 
-  // Aggregated data for Recharts
-  const chartData = useMemo(() => {
-    if (!xAxisCol || !rawRows || rawRows.length === 0) return [];
-
-    const grouped = {};
-    rawRows.forEach((r) => {
-      const key = String(r[xAxisCol] || '(Blank)');
-      const val = Number(r[yAxisCol]) || 0;
-
-      if (!grouped[key]) {
-        grouped[key] = { key, sum: 0, count: 0 };
+    const autoProfile = profileDataset(sample.data);
+    if (autoProfile) {
+      const autoSuggestions = generateSmartSuggestions(autoProfile);
+      if (autoSuggestions.length > 0) {
+        const first = autoSuggestions[0];
+        setSelectedX(first.dimension);
+        setSelectedY(first.metric);
+        setSelectedAgg(first.agg);
+        setChartType(first.chartType);
+        const res = executeDataQuery(first.query, sample.data, autoProfile, first);
+        setQueryResult(res);
       }
-      grouped[key].sum += val;
-      grouped[key].count += 1;
+    }
+  };
+
+  const resetAll = () => {
+    setData(null);
+    setFileName(null);
+    setQueryResult(null);
+    setClarificationPrompt(null);
+    setUserQuery('');
+    setErrorMessage('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Run AI Query / Operation
+  const handleExecuteQuery = (e) => {
+    e?.preventDefault();
+    if (!userQuery.trim() || !data || !profile) return;
+
+    setClarificationPrompt(null);
+    const qLower = userQuery.toLowerCase();
+
+    // Check for ambiguity
+    if ((qLower.includes('revenue') || qLower.includes('sales') || qLower.includes('amount')) && profile.numericCols.length > 1 && !profile.numericCols.some(n => qLower.includes(n.name.toLowerCase()))) {
+      setClarificationPrompt({
+        question: `We noticed multiple numeric fields (${profile.numericCols.map(c => c.name).join(', ')}). Which specific field should we analyze?`,
+        options: profile.numericCols.map(c => c.name),
+        type: 'metric',
+      });
+      return;
+    }
+
+    const res = executeDataQuery(userQuery, data, profile, {
+      chartType,
+      agg: selectedAgg,
+      dimension: selectedX,
+      metric: selectedY,
     });
 
-    return Object.values(grouped).map((item) => {
-      let finalVal = item.sum;
-      if (aggMode === 'avg') finalVal = Math.round((item.sum / item.count) * 10) / 10;
-      if (aggMode === 'count') finalVal = item.count;
-      return {
-        name: item.key,
-        value: finalVal,
-      };
-    });
-  }, [rawRows, xAxisCol, yAxisCol, aggMode]);
+    if (res) {
+      setQueryResult(res);
+      setSelectedX(res.dimension);
+      setSelectedY(res.metric);
+      setSelectedAgg(res.agg);
+      setChartType(res.chartType);
+    }
+  };
 
-  // Filtered rows for the Data Table
-  const filteredRows = useMemo(() => {
-    if (!searchQuery.trim()) return rawRows;
-    const q = searchQuery.toLowerCase();
-    return rawRows.filter((row) =>
+  const handleSuggestionClick = (sug) => {
+    setUserQuery(sug.query);
+    setSelectedX(sug.dimension);
+    setSelectedY(sug.metric);
+    setSelectedAgg(sug.agg);
+    setChartType(sug.chartType);
+    const res = executeDataQuery(sug.query, data, profile, sug);
+    setQueryResult(res);
+  };
+
+  const handleClarificationSelect = (chosenValue) => {
+    if (!clarificationPrompt) return;
+    let newQuery = userQuery;
+    if (clarificationPrompt.type === 'metric') {
+      setSelectedY(chosenValue);
+      newQuery = `${userQuery} using metric ${chosenValue}`;
+    } else {
+      setSelectedX(chosenValue);
+      newQuery = `${userQuery} grouped by ${chosenValue}`;
+    }
+    setUserQuery(newQuery);
+    setClarificationPrompt(null);
+
+    const res = executeDataQuery(newQuery, data, profile, {
+      chartType,
+      agg: selectedAgg,
+      dimension: clarificationPrompt.type === 'dimension' ? chosenValue : selectedX,
+      metric: clarificationPrompt.type === 'metric' ? chosenValue : selectedY,
+    });
+    setQueryResult(res);
+  };
+
+  // Re-run query on manual dropdown changes
+  const handleManualControlChange = (newX, newY, newAgg, newChart) => {
+    setSelectedX(newX);
+    setSelectedY(newY);
+    setSelectedAgg(newAgg);
+    setChartType(newChart);
+
+    if (!data || !profile) return;
+    const res = executeDataQuery('', data, profile, {
+      chartType: newChart,
+      agg: newAgg,
+      dimension: newX,
+      metric: newY,
+    });
+    setQueryResult(res);
+  };
+
+  // Table Explorer filtered and paginated
+  const filteredTableData = useMemo(() => {
+    if (!data) return [];
+    if (!tableSearch.trim()) return data;
+    const q = tableSearch.toLowerCase();
+    return data.filter((row) =>
       Object.values(row).some((val) => String(val).toLowerCase().includes(q))
     );
-  }, [rawRows, searchQuery]);
+  }, [data, tableSearch]);
 
   const paginatedRows = useMemo(() => {
     const start = (currentPage - 1) * rowsPerPage;
-    return filteredRows.slice(start, start + rowsPerPage);
-  }, [filteredRows, currentPage]);
+    return filteredTableData.slice(start, start + rowsPerPage);
+  }, [filteredTableData, currentPage]);
 
-  const totalPages = Math.ceil(filteredRows.length / rowsPerPage) || 1;
+  const totalPages = Math.ceil(filteredTableData.length / rowsPerPage) || 1;
 
-  const exportFilteredCSV = () => {
-    const ws = XLSX.utils.json_to_sheet(filteredRows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Filtered_Data');
-    XLSX.writeFile(wb, `DataPulse_Export_${Date.now()}.csv`);
+  const exportCurrentCsv = () => {
+    if (!data || data.length === 0) return;
+    const ws = XLSX.utils.json_to_sheet(data);
+    const csv = XLSX.utils.sheet_to_csv(ws);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `exported_${fileName || 'dataset'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="paw-page-container" style={{ maxWidth: '1440px', margin: '0 auto', padding: '24px' }}>
-      {/* Top Banner & Workspace Context */}
+    <div className="paw-dashboard-page" style={{ padding: '24px', maxWidth: '1440px', margin: '0 auto' }}>
+      {/* Studio Header Bar */}
       <div
-        className="paw-card"
         style={{
-          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(34, 211, 238, 0.08) 100%)',
-          borderColor: 'rgba(129, 140, 248, 0.25)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '16px',
           marginBottom: '24px',
-          padding: '20px 24px',
+          paddingBottom: '16px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <span className="paw-badge badge-indigo">
-                <Sparkles size={12} style={{ marginRight: '4px' }} />
-                DataPulse Studio
-              </span>
-              <span className="paw-badge badge-cyan">Universal Auto-Dashboard Engine</span>
-            </div>
-            <h2 style={{ fontSize: '1.6rem', fontWeight: 700, color: '#fff', margin: 0 }}>
-              Make Dashboard From Any CSV & Excel File
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px', margin: 0 }}>
-              Upload any raw spreadsheet to generate instant executive KPIs, interactive charts, and filtered datasets.
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Link
-              to="/dashboard"
-              className="paw-btn paw-btn-secondary"
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <Building2 size={16} />
-              <span>Switch to Clinic Dashboard</span>
-            </Link>
+              <Bot size={20} color="#fff" />
+            </div>
+            <div>
+              <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+                Universal AI Auto-Dashboard Studio
+              </h1>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Intelligent spreadsheet analytics & Power BI copilot for any CSV or Excel file
+              </span>
+            </div>
           </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {data && (
+            <button
+              onClick={resetAll}
+              className="paw-btn paw-btn-secondary"
+              title="Clear active file and start fresh"
+            >
+              <RefreshCw size={14} />
+              <span>Upload New File</span>
+            </button>
+          )}
+
+          <Link to="/dashboard" className="paw-btn paw-btn-primary" style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+            <Building2 size={15} />
+            <span>🐾 Switch to Clinic Operations</span>
+          </Link>
         </div>
       </div>
 
-      {/* File Upload Zone & Quick Sample Loaders */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-        {/* Upload Box */}
-        <div
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className="paw-card"
-          style={{
-            border: '2px dashed rgba(129, 140, 248, 0.4)',
-            cursor: 'pointer',
-            textAlign: 'center',
-            padding: '32px 20px',
-            transition: 'all 0.2s ease',
-            background: 'rgba(255, 255, 255, 0.02)',
-          }}
-        >
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={(e) => handleFileUpload(e.target.files[0])}
-            accept=".csv, .xlsx, .xls"
-            style={{ display: 'none' }}
-          />
+      {/* Hidden File Input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        accept=".csv, .xlsx, .xls"
+        style={{ display: 'none' }}
+      />
+
+      {/* ERROR BANNER */}
+      {errorMessage && (
+        <div className="paw-alert paw-alert-error" style={{ marginBottom: '20px' }}>
+          <AlertCircle size={16} />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
+      {/* =========================================================================
+          STATE 1: EMPTY STATE (DEFAULT) — INVITING AI FILE DROPZONE
+      ========================================================================== */}
+      {!data && (
+        <div style={{ maxWidth: '820px', margin: '40px auto' }}>
           <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
             style={{
-              width: '52px',
-              height: '52px',
-              borderRadius: '50%',
-              background: 'rgba(129, 140, 248, 0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 12px auto',
-              color: '#818cf8',
+              border: dragActive ? '2px dashed #06b6d4' : '2px dashed rgba(255, 255, 255, 0.15)',
+              background: dragActive
+                ? 'rgba(6, 182, 212, 0.08)'
+                : 'radial-gradient(circle at center, rgba(15, 23, 42, 0.6) 0%, rgba(10, 14, 23, 0.8) 100%)',
+              borderRadius: '20px',
+              padding: '60px 32px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.25s ease',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
             }}
           >
-            <UploadCloud size={28} />
-          </div>
-          <h4 style={{ color: '#fff', fontSize: '1.05rem', margin: '0 0 4px 0' }}>
-            Drop any CSV or Excel (.xlsx) file here
-          </h4>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: 0 }}>
-            or click to browse from your computer. Automatic schema & metric discovery.
-          </p>
-          <div style={{ marginTop: '12px' }}>
-            <span className="paw-badge badge-emerald" style={{ fontSize: '0.75rem' }}>
-              Active File: {fileName} ({rawRows.length} rows)
-            </span>
-          </div>
-        </div>
-
-        {/* Quick Sample Selector Card */}
-        <div className="paw-card" style={{ padding: '24px' }}>
-          <h4 style={{ color: '#fff', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <FileSpreadsheet size={16} className="text-cyan" />
-            <span>Don't have a spreadsheet right now? Load a Demo:</span>
-          </h4>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '16px' }}>
-            Test the instant chart generator with pre-built real-world datasets:
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <button
-              onClick={() => {
-                setFileName(SAMPLE_DATASETS.clinicSales.name);
-                setRawRows(SAMPLE_DATASETS.clinicSales.data);
-                setCurrentPage(1);
+            <div
+              style={{
+                width: '72px',
+                height: '72px',
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.2))',
+                border: '1px solid rgba(6, 182, 212, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px auto',
               }}
-              className="paw-btn paw-btn-secondary"
-              style={{ justifyContent: 'space-between', textAlign: 'left', width: '100%' }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '1.2rem' }}>🏥</span>
-                <div>
-                  <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.88rem' }}>Clinic Revenue & Bookings</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Month, Clinic, Service, Bookings, Revenue, Rating</div>
-                </div>
-              </div>
-              <ArrowRight size={14} />
-            </button>
-
-            <button
-              onClick={() => {
-                setFileName(SAMPLE_DATASETS.ecommerce.name);
-                setRawRows(SAMPLE_DATASETS.ecommerce.data);
-                setCurrentPage(1);
-              }}
-              className="paw-btn paw-btn-secondary"
-              style={{ justifyContent: 'space-between', textAlign: 'left', width: '100%' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '1.2rem' }}>📦</span>
-                <div>
-                  <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.88rem' }}>Pet Products Sales & Orders</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Category, Region, UnitsSold, GrossSales, Profit</div>
-                </div>
-              </div>
-              <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Instant Summary KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <div className="paw-card" style={{ padding: '18px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-            <span>TOTAL ROWS</span>
-            <Hash size={16} />
-          </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff', marginTop: '6px' }}>
-            {kpiStats.totalRows.toLocaleString()}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Across {columns.length} columns detected
-          </div>
-        </div>
-
-        {kpiStats.metric1 && (
-          <div className="paw-card" style={{ padding: '18px 20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#818cf8', fontSize: '0.8rem' }}>
-              <span>TOTAL {kpiStats.metric1.label.toUpperCase()}</span>
-              <TrendingUp size={16} />
+              <UploadCloud size={36} color="#67e8f9" />
             </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff', marginTop: '6px' }}>
-              {kpiStats.metric1.sum.toLocaleString()}
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Avg: {kpiStats.metric1.avg.toLocaleString()} per record
-            </div>
-          </div>
-        )}
 
-        {kpiStats.metric2 && (
-          <div className="paw-card" style={{ padding: '18px 20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#22d3ee', fontSize: '0.8rem' }}>
-              <span>TOTAL {kpiStats.metric2.label.toUpperCase()}</span>
-              <TrendingUp size={16} />
-            </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff', marginTop: '6px' }}>
-              {kpiStats.metric2.sum.toLocaleString()}
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-              Avg: {kpiStats.metric2.avg.toLocaleString()} per record
-            </div>
-          </div>
-        )}
-
-        <div className="paw-card" style={{ padding: '18px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34d399', fontSize: '0.8rem' }}>
-            <span>DATA DIMENSIONS</span>
-            <Layers size={16} />
-          </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#fff', marginTop: '6px' }}>
-            {categoricalCols.length} Categories
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {numericCols.length} Numeric metrics ready to plot
-          </div>
-        </div>
-      </div>
-
-      {/* Interactive Chart Generator Section */}
-      <div className="paw-card" style={{ padding: '24px', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
-          <div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: 0 }}>
-              Interactive Chart Studio
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '2px', margin: 0 }}>
-              Plot any dimension against your chosen metric with instant aggregation.
+            <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>
+              Upload any CSV or Excel Spreadsheet
+            </h2>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', maxWidth: '480px', margin: '0 auto 24px auto' }}>
+              Drag & drop your file here, or click to browse. The AI engine will inspect your columns, understand the domain, and build interactive dashboards instantly.
             </p>
+
+            <div style={{ display: 'inline-flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <span className="paw-badge badge-cyan">.CSV</span>
+              <span className="paw-badge badge-indigo">.XLSX</span>
+              <span className="paw-badge badge-emerald">.XLS</span>
+              <span className="paw-badge badge-amber">100% Client-Side Privacy</span>
+            </div>
           </div>
 
-          {/* Chart Controls Bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            {/* Chart Type Toggle */}
-            <div className="paw-switcher-buttons" style={{ display: 'flex', gap: '4px' }}>
-              <button
-                onClick={() => setChartType('bar')}
-                className={`paw-btn paw-btn-xs ${chartType === 'bar' ? 'paw-btn-primary' : 'paw-btn-secondary'}`}
-                title="Bar Chart"
-              >
-                <BarChart3 size={14} />
-                <span>Bar</span>
-              </button>
-              <button
-                onClick={() => setChartType('line')}
-                className={`paw-btn paw-btn-xs ${chartType === 'line' ? 'paw-btn-primary' : 'paw-btn-secondary'}`}
-                title="Line Chart"
-              >
-                <LineChartIcon size={14} />
-                <span>Line</span>
-              </button>
-              <button
-                onClick={() => setChartType('area')}
-                className={`paw-btn paw-btn-xs ${chartType === 'area' ? 'paw-btn-primary' : 'paw-btn-secondary'}`}
-                title="Area Chart"
-              >
-                <AreaChartIcon size={14} />
-                <span>Area</span>
-              </button>
-              <button
-                onClick={() => setChartType('pie')}
-                className={`paw-btn paw-btn-xs ${chartType === 'pie' ? 'paw-btn-primary' : 'paw-btn-secondary'}`}
-                title="Pie Chart"
-              >
-                <PieChartIcon size={14} />
-                <span>Pie</span>
-              </button>
+          {/* Quick Sample Links Accordion */}
+          <div
+            style={{
+              marginTop: '28px',
+              padding: '18px 24px',
+              borderRadius: '12px',
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Sparkles size={16} className="text-accent" />
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Don't have a spreadsheet right now? Test with pre-built data:
+              </span>
             </div>
 
-            {/* X-Axis Selector */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>X-Axis:</label>
-              <select
-                value={xAxisCol}
-                onChange={(e) => setXAxisCol(e.target.value)}
-                className="paw-form-select"
-                style={{ padding: '6px 10px', fontSize: '0.82rem' }}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => loadSample('clinicSales')}
+                className="paw-btn paw-btn-xs paw-btn-secondary"
               >
-                {columns.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Y-Axis Metric Selector */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Metric:</label>
-              <select
-                value={yAxisCol}
-                onChange={(e) => setYAxisCol(e.target.value)}
-                className="paw-form-select"
-                style={{ padding: '6px 10px', fontSize: '0.82rem' }}
+                Clinic Revenue 2026 (.xlsx)
+              </button>
+              <button
+                type="button"
+                onClick={() => loadSample('retailOrders')}
+                className="paw-btn paw-btn-xs paw-btn-secondary"
               >
-                {numericCols.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Aggregation Mode Selector */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Agg:</label>
-              <select
-                value={aggMode}
-                onChange={(e) => setAggMode(e.target.value)}
-                className="paw-form-select"
-                style={{ padding: '6px 10px', fontSize: '0.82rem' }}
-              >
-                <option value="sum">Sum</option>
-                <option value="avg">Average</option>
-                <option value="count">Count Rows</option>
-              </select>
+                Pet Products Orders (.csv)
+              </button>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Dynamic Chart Area */}
-        <div style={{ height: '380px', width: '100%', marginTop: '16px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            {chartType === 'bar' ? (
-              <BarChart data={chartData} margin={{ top: 10, right: 20, left: 20, bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis dataKey="name" stroke="#888" tick={{ fill: '#aaa', fontSize: 11 }} angle={-25} textAnchor="end" />
-                <YAxis stroke="#888" tick={{ fill: '#aaa', fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1a1a2e', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                />
-                <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                <Bar dataKey="value" name={`${yAxisCol} (${aggMode.toUpperCase()})`} fill="#818cf8" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            ) : chartType === 'line' ? (
-              <LineChart data={chartData} margin={{ top: 10, right: 20, left: 20, bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis dataKey="name" stroke="#888" tick={{ fill: '#aaa', fontSize: 11 }} angle={-25} textAnchor="end" />
-                <YAxis stroke="#888" tick={{ fill: '#aaa', fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1a1a2e', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                />
-                <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  name={`${yAxisCol} (${aggMode.toUpperCase()})`}
-                  stroke="#22d3ee"
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: '#22d3ee' }}
-                />
-              </LineChart>
-            ) : chartType === 'area' ? (
-              <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 20, bottom: 40 }}>
-                <defs>
-                  <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#34d399" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#34d399" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis dataKey="name" stroke="#888" tick={{ fill: '#aaa', fontSize: 11 }} angle={-25} textAnchor="end" />
-                <YAxis stroke="#888" tick={{ fill: '#aaa', fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1a1a2e', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                />
-                <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  name={`${yAxisCol} (${aggMode.toUpperCase()})`}
-                  stroke="#34d399"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#areaGradient)"
-                />
-              </AreaChart>
-            ) : (
-              <PieChart>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1a1a2e', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                />
-                <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                <Pie
-                  data={chartData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={120}
-                  innerRadius={50}
-                  paddingAngle={3}
-                  label
+      {/* =========================================================================
+          STATE 2: ACTIVE FILE LOADED — AI INSIGHTS, COPILOT & POWER BI STUDIO
+      ========================================================================== */}
+      {data && profile && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+          {/* AI Executive Summary Card */}
+          <div
+            className="paw-card"
+            style={{
+              padding: '20px 24px',
+              border: '1px solid rgba(6, 182, 212, 0.3)',
+              background: 'radial-gradient(circle at top left, rgba(6, 182, 212, 0.1) 0%, rgba(15, 23, 42, 0.85) 100%)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+                <div
+                  style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '10px',
+                    background: 'rgba(6, 182, 212, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
                 >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={PALETTE[index % PALETTE.length]} />
-                  ))}
-                </Pie>
-              </PieChart>
-            )}
-          </ResponsiveContainer>
-        </div>
-      </div>
+                  <Bot size={22} className="text-cyan" />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff', margin: 0 }}>
+                      AI Dataset Intelligence: {fileName}
+                    </h3>
+                    <span className="paw-badge badge-cyan">{profile.domain}</span>
+                    <span className="paw-badge badge-emerald">{profile.rowCount.toLocaleString()} Rows</span>
+                    <span className="paw-badge badge-indigo">{profile.columnCount} Columns</span>
+                  </div>
+                  <p style={{ fontSize: '0.86rem', color: '#cbd5e1', margin: '8px 0 0 0', lineHeight: 1.5 }}>
+                    {profile.summary}
+                  </p>
+                </div>
+              </div>
 
-      {/* Raw Data Explorer & Table Section */}
-      <div className="paw-card" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
-          <div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: 0 }}>
-              Spreadsheet Data Explorer
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: '2px', margin: 0 }}>
-              Showing {filteredRows.length} matching rows. Real-time search across all columns.
-            </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={exportCurrentCsv}
+                  className="paw-btn paw-btn-xs paw-btn-secondary"
+                  title="Export processed dataset"
+                >
+                  <Download size={13} />
+                  <span>Export CSV</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={resetAll}
+                  className="paw-btn paw-btn-xs paw-btn-danger"
+                  title="Close file and reset"
+                >
+                  <X size={13} />
+                  <span>Close File</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Field Breakdown Badges */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                flexWrap: 'wrap',
+                marginTop: '16px',
+                paddingTop: '14px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                fontSize: '0.76rem',
+              }}
+            >
+              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Detected Metrics (Numeric):</span>
+              {profile.numericCols.map((c) => (
+                <span key={c.name} className="paw-badge badge-emerald" style={{ fontSize: '0.72rem' }}>
+                  # {c.name} (avg: {c.avg.toLocaleString()})
+                </span>
+              ))}
+
+              <span style={{ color: 'var(--text-muted)', fontWeight: 600, marginLeft: '12px' }}>
+                Dimensions (Grouping Keys):
+              </span>
+              {profile.categoricalCols.map((c) => (
+                <span key={c.name} className="paw-badge badge-indigo" style={{ fontSize: '0.72rem' }}>
+                  🗂️ {c.name} ({c.uniqueCount} distinct)
+                </span>
+              ))}
+            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Search Input */}
-            <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--text-muted)' }} />
+          {/* AI Natural Language Query & Operations Copilot */}
+          <div className="paw-card" style={{ padding: '20px 24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <Sparkles size={16} className="text-accent" />
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 600, color: '#fff', margin: 0 }}>
+                Ask AI / Execute Power BI Query
+              </h3>
+            </div>
+
+            <form onSubmit={handleExecuteQuery} style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
               <input
                 type="text"
-                placeholder="Search spreadsheet rows..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
+                value={userQuery}
+                onChange={(e) => setUserQuery(e.target.value)}
+                placeholder="Type an operation, e.g. 'Show revenue by clinic as bar chart' or 'Average bookings per service'..."
                 className="paw-form-input"
-                style={{ paddingLeft: '32px', height: '34px', fontSize: '0.82rem', width: '220px' }}
+                style={{ flex: 1, padding: '12px 16px', fontSize: '0.9rem' }}
               />
+              <button
+                type="submit"
+                className="paw-btn paw-btn-primary"
+                style={{ background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', padding: '12px 20px' }}
+              >
+                <Play size={15} />
+                <span>Run Operation</span>
+              </button>
+            </form>
+
+            {/* Clarification Dialog if AI asks for user input */}
+            {clarificationPrompt && (
+              <div
+                style={{
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  borderRadius: '10px',
+                  padding: '14px 18px',
+                  marginBottom: '14px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fbbf24', fontWeight: 600, fontSize: '0.85rem' }}>
+                  <HelpCircle size={16} />
+                  <span>AI Needs Clarification:</span>
+                </div>
+                <div style={{ fontSize: '0.82rem', color: '#fff', margin: '6px 0 10px 0' }}>
+                  {clarificationPrompt.question}
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {clarificationPrompt.options.map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => handleClarificationSelect(opt)}
+                      className="paw-btn paw-btn-xs paw-btn-primary"
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Smart Suggested Operations (Dynamically computed from dataset columns) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                Suggested Operations:
+              </span>
+              {suggestions.map((sug, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSuggestionClick(sug)}
+                  className="paw-btn paw-btn-xs paw-btn-secondary"
+                  style={{ borderRadius: '20px', padding: '6px 12px', fontSize: '0.76rem' }}
+                >
+                  <Sparkles size={11} style={{ marginRight: '4px' }} className="text-cyan" />
+                  {sug.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Interactive Chart Visualizer & Power BI Controls */}
+          <div className="paw-card" style={{ padding: '24px' }}>
+            {/* Visual Header & Manual Controls Bar */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '16px',
+                marginBottom: '20px',
+                paddingBottom: '16px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              }}
+            >
+              <div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: '#fff', margin: 0 }}>
+                  {queryResult?.title || 'Visual Output Studio'}
+                </h3>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Power BI Aggregation: <strong>{selectedAgg.toUpperCase()}</strong> of{' '}
+                  <strong className="text-white">{selectedY || 'Count'}</strong> by{' '}
+                  <strong className="text-cyan">{selectedX}</strong>
+                </div>
+              </div>
+
+              {/* Controls: Chart Type, Metric, Dimension, Aggregation */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                {/* Dimension (X-Axis) */}
+                <select
+                  value={selectedX}
+                  onChange={(e) => handleManualControlChange(e.target.value, selectedY, selectedAgg, chartType)}
+                  className="paw-form-select"
+                  style={{ width: 'auto', fontSize: '0.8rem', padding: '6px 10px' }}
+                >
+                  {profile.categoricalCols.map((c) => (
+                    <option key={c.name} value={c.name}>
+                      X: {c.name}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Metric (Y-Axis) */}
+                <select
+                  value={selectedY}
+                  onChange={(e) => handleManualControlChange(selectedX, e.target.value, selectedAgg, chartType)}
+                  className="paw-form-select"
+                  style={{ width: 'auto', fontSize: '0.8rem', padding: '6px 10px' }}
+                >
+                  <option value="">Y: (Count of Rows)</option>
+                  {profile.numericCols.map((c) => (
+                    <option key={c.name} value={c.name}>
+                      Y: {c.name}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Aggregation */}
+                <select
+                  value={selectedAgg}
+                  onChange={(e) => handleManualControlChange(selectedX, selectedY, e.target.value, chartType)}
+                  className="paw-form-select"
+                  style={{ width: 'auto', fontSize: '0.8rem', padding: '6px 10px' }}
+                >
+                  <option value="sum">SUM</option>
+                  <option value="avg">AVERAGE</option>
+                  <option value="count">COUNT</option>
+                  <option value="min">MIN</option>
+                  <option value="max">MAX</option>
+                </select>
+
+                {/* Chart Style Switcher */}
+                <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '2px' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleManualControlChange(selectedX, selectedY, selectedAgg, 'bar')}
+                    className={`paw-btn paw-btn-xs ${chartType === 'bar' ? 'paw-btn-primary' : ''}`}
+                    title="Bar Chart"
+                  >
+                    <BarChart3 size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleManualControlChange(selectedX, selectedY, selectedAgg, 'line')}
+                    className={`paw-btn paw-btn-xs ${chartType === 'line' ? 'paw-btn-primary' : ''}`}
+                    title="Line Chart"
+                  >
+                    <LineChartIcon size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleManualControlChange(selectedX, selectedY, selectedAgg, 'area')}
+                    className={`paw-btn paw-btn-xs ${chartType === 'area' ? 'paw-btn-primary' : ''}`}
+                    title="Area Chart"
+                  >
+                    <AreaChartIcon size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleManualControlChange(selectedX, selectedY, selectedAgg, 'pie')}
+                    className={`paw-btn paw-btn-xs ${chartType === 'pie' ? 'paw-btn-primary' : ''}`}
+                    title="Donut / Pie Chart"
+                  >
+                    <PieChartIcon size={14} />
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <button
-              onClick={exportFilteredCSV}
-              className="paw-btn paw-btn-secondary paw-btn-sm"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Download size={14} />
-              <span>Export CSV</span>
-            </button>
-          </div>
-        </div>
+            {/* Chart Canvas */}
+            <div style={{ width: '100%', height: '360px', marginTop: '10px' }}>
+              {queryResult?.chartData && queryResult.chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  {chartType === 'line' ? (
+                    <LineChart data={queryResult.chartData} margin={{ top: 10, right: 30, left: 10, bottom: 40 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="name" stroke="#94a3b8" tick={{ fontSize: 11 }} angle={-25} textAnchor="end" />
+                      <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} />
+                      <Tooltip contentStyle={{ background: '#0f172a', borderColor: '#334155', borderRadius: '8px' }} />
+                      <Line type="monotone" dataKey="value" stroke="#22d3ee" strokeWidth={3} dot={{ r: 4 }} />
+                    </LineChart>
+                  ) : chartType === 'area' ? (
+                    <AreaChart data={queryResult.chartData} margin={{ top: 10, right: 30, left: 10, bottom: 40 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="name" stroke="#94a3b8" tick={{ fontSize: 11 }} angle={-25} textAnchor="end" />
+                      <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} />
+                      <Tooltip contentStyle={{ background: '#0f172a', borderColor: '#334155', borderRadius: '8px' }} />
+                      <Area type="monotone" dataKey="value" stroke="#818cf8" fill="rgba(129, 140, 248, 0.25)" />
+                    </AreaChart>
+                  ) : chartType === 'pie' ? (
+                    <PieChart>
+                      <Tooltip contentStyle={{ background: '#0f172a', borderColor: '#334155', borderRadius: '8px' }} />
+                      <Legend />
+                      <Pie
+                        data={queryResult.chartData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={65}
+                        outerRadius={115}
+                        paddingAngle={3}
+                      >
+                        {queryResult.chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={PALETTE[index % PALETTE.length]} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  ) : (
+                    <BarChart data={queryResult.chartData} margin={{ top: 10, right: 30, left: 10, bottom: 40 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="name" stroke="#94a3b8" tick={{ fontSize: 11 }} angle={-25} textAnchor="end" />
+                      <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} />
+                      <Tooltip contentStyle={{ background: '#0f172a', borderColor: '#334155', borderRadius: '8px' }} />
+                      <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                        {queryResult.chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={PALETTE[index % PALETTE.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                  No aggregation formed yet. Select dimensions and metrics above or ask AI.
+                </div>
+              )}
+            </div>
 
-        {/* Table Grid */}
-        <div style={{ overflowX: 'auto', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                {columns.map((col) => (
-                  <th key={col} style={{ padding: '10px 14px', color: 'var(--text-muted)', fontWeight: 600 }}>
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedRows.length > 0 ? (
-                paginatedRows.map((row, idx) => (
-                  <tr
-                    key={idx}
-                    style={{
-                      borderBottom: '1px solid rgba(255,255,255,0.03)',
-                      backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
+            {/* AI Analytical Findings Commentary */}
+            {queryResult?.insight && (
+              <div
+                style={{
+                  marginTop: '16px',
+                  padding: '12px 18px',
+                  borderRadius: '8px',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}
+              >
+                <Bot size={18} className="text-cyan" />
+                <div style={{ fontSize: '0.84rem', color: '#cbd5e1' }}>
+                  <strong>AI Insight:</strong> {queryResult.insight}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Tabular Data Explorer */}
+          <div className="paw-card" style={{ padding: '24px' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '12px',
+                marginBottom: '16px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <TableIcon size={18} className="text-emerald" />
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#fff', margin: 0 }}>
+                  Tabular Data Explorer ({filteredTableData.length.toLocaleString()} Records)
+                </h3>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ position: 'relative' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    value={tableSearch}
+                    onChange={(e) => {
+                      setTableSearch(e.target.value);
+                      setCurrentPage(1);
                     }}
-                  >
-                    {columns.map((col) => (
-                      <td key={col} style={{ padding: '10px 14px', color: '#eee' }}>
-                        {String(row[col])}
-                      </td>
+                    placeholder="Search any field..."
+                    className="paw-form-input"
+                    style={{ paddingLeft: '32px', fontSize: '0.8rem', padding: '6px 12px 6px 32px' }}
+                  />
+                </div>
+
+                <button onClick={exportCurrentCsv} className="paw-btn paw-btn-xs paw-btn-secondary">
+                  <Download size={13} />
+                  <span>Download Clean CSV</span>
+                </button>
+              </div>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table className="paw-table">
+                <thead>
+                  <tr>
+                    {profile.columns.map((col) => (
+                      <th key={col.name}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          {col.type === 'numeric' ? '#' : '🗂️'} {col.name}
+                        </span>
+                      </th>
                     ))}
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={columns.length} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
-                    No rows matching your search filter.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {paginatedRows.map((row, rIdx) => (
+                    <tr key={rIdx}>
+                      {profile.columns.map((col) => (
+                        <td key={col.name}>
+                          {col.type === 'numeric' && typeof row[col.name] === 'number'
+                            ? row[col.name].toLocaleString()
+                            : String(row[col.name] ?? '-')}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-        {/* Pagination Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', fontSize: '0.82rem' }}>
-          <span style={{ color: 'var(--text-muted)' }}>
-            Page {currentPage} of {totalPages} ({filteredRows.length} total rows)
-          </span>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="paw-btn paw-btn-secondary paw-btn-xs"
+            {/* Pagination Controls */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginTop: '16px',
+                fontSize: '0.82rem',
+                color: 'var(--text-muted)',
+              }}
             >
-              Previous
-            </button>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="paw-btn paw-btn-secondary paw-btn-xs"
-            >
-              Next
-            </button>
+              <div>
+                Showing {(currentPage - 1) * rowsPerPage + 1} to{' '}
+                {Math.min(currentPage * rowsPerPage, filteredTableData.length)} of{' '}
+                {filteredTableData.length.toLocaleString()} rows
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="paw-btn paw-btn-xs paw-btn-secondary"
+                >
+                  Previous
+                </button>
+                <span style={{ padding: '4px 10px', color: '#fff' }}>
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="paw-btn paw-btn-xs paw-btn-secondary"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

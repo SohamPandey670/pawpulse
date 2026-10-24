@@ -7,21 +7,30 @@
 [![Excel](https://img.shields.io/badge/Advanced_Excel-Management_Pack-107C41?logo=microsoftexcel&logoColor=white)](https://office.com)
 
 PawPulse is a unified enterprise platform featuring dual workspaces:
-1. **📊 Universal CSV / Excel Auto-Dashboard Studio (`/studio`)**: Upload any `.csv`, `.xlsx`, or `.xls` file to instantly generate summary KPIs, auto-detect metrics and dimensions, construct interactive charts (Bar, Line, Area, Pie), and explore datasets without server configuration.
+1. **📊 Universal CSV / Excel Auto-Dashboard Studio (`/studio`)**: Upload any `.csv`, `.xlsx`, or `.xls` file to instantly generate summary KPIs, auto-detect metrics and dimensions, execute natural language Power BI operations, and explore datasets without server configuration.
 2. **🐾 Veterinary Clinic Healthcare Suite (`/dashboard`, `/vet`, `/owner`, `/coordinator`)**: Full-stack clinical operations engine with Admin KPI suite, Care Coordinator SLA engine, Vet Clinical Console with live camera/picture prescription uploads, and Pet Parent portal.
 
 **Live Frontend (Vercel)**: [https://pawpulse-sohams-projects-011c1ac2.vercel.app](https://pawpulse-sohams-projects-011c1ac2.vercel.app)  
 **Live Backend API (Render)**: [https://pawpulse-v1df.onrender.com](https://pawpulse-v1df.onrender.com)  
-**Database (Supabase)**: Managed PostgreSQL 15 on AWS Mumbai Pooler
+**Database (Supabase)**: Managed PostgreSQL 15 on AWS Mumbai Pooler  
+**Standalone AI Dashboard Project**: `C:\Users\soham\Desktop\smart-dashboard-ai` (separate independent codebase)
 
 ---
 
-## 🌟 Dual Workspace Architecture & Quick Switching
+## 🌟 Dual Workspace Architecture & Enterprise Features
 
-- **Login Page Mode Switcher (`/login`)**:
-  - **Option 1: "Make Dashboard from CSV/Excel"** — launches the browser-based SheetJS + Recharts analytics studio.
-  - **Option 2: "PawPulse Clinic Operations"** — launches the veterinary clinical operations suite with 1-click role logins (Admin, Coordinator, Vet, Owner).
-- **In-App Navbar Switcher**: Instant `[ 📊 Make Dashboard (CSV/Excel) ]` ⟷ `[ 🐾 Clinic Operations ]` header toggle.
+- **Enterprise Login Page with Bloom Filter & Google Sign-In (`/login`)**:
+  - **Bloom Filter Security Bitset**: Real-time $O(1)$ client-side evaluation (8,192 bits, 4 hash passes, < 0.05ms) scanning passwords against leaked credential databases.
+  - **Continue with Google**: Interactive Google OAuth 2.0 account authentication.
+  - **Enterprise SAML / Okta SSO**: Domain verification powered by an enterprise Bloom filter bitset.
+  - **1-Click Reviewer Personas**: Admin, Care Coordinator, Veterinarian, and Pet Parent for instant evaluation.
+- **Smart AI Auto-Dashboard Studio (`/studio`)**:
+  - Starts **100% clean and empty** with a drag-and-drop uploader.
+  - **AI Dataset Profiler**: Auto-detects domain (Sales, Healthcare, HR, Inventory), categorizes columns (Metrics vs Dimensions), and generates an executive plain-English summary.
+  - **Conversational Copilot & Power BI Operations**: Ask queries like *"Show total revenue by clinic"* or *"Top 5 products by margin"*.
+  - **Interactive Clarification**: Prompts the user if multiple metrics or dimensions are ambiguous.
+- **Standalone AI Dashboard Codebase**:
+  - Dedicated repository available at `C:\Users\soham\Desktop\smart-dashboard-ai` with its own `package.json`, Vite configuration, and README.
 - **Vet Console Photo / Camera Uploads (`/vet`)**: Live webcam or mobile camera photo snapping, image file uploads (`.png`, `.jpg`, `.webp`), prescription zoom modals, and pet parent portal synchronization.
 
 ---

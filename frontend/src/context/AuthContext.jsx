@@ -39,6 +39,24 @@ export function AuthProvider({ children }) {
     return { success: false, error: 'Invalid email or password' };
   }, []);
 
+  const loginOAuth = useCallback((oauthUser) => {
+    const userData = {
+      name: oauthUser.name || 'Google User',
+      email: oauthUser.email || 'user@gmail.com',
+      role: oauthUser.role || 'ADMIN',
+      avatar: oauthUser.avatar || null,
+      provider: oauthUser.provider || 'google',
+      token: `oauth-jwt-token-${Date.now()}`,
+    };
+    setUser(userData);
+    try {
+      localStorage.setItem('pawpulse_user', JSON.stringify(userData));
+    } catch {
+      // ignore
+    }
+    return { success: true, user: userData };
+  }, []);
+
   const logout = useCallback(() => {
     setUser(null);
     try {
@@ -56,7 +74,7 @@ export function AuthProvider({ children }) {
   );
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, hasRole, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, loginOAuth, logout, hasRole, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );
