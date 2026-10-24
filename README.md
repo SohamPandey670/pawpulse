@@ -22,6 +22,7 @@ PawPulse is a unified enterprise platform featuring dual workspaces:
 - **Standard Enterprise Authentication Experience (`/login`)**:
   - **Master Admin Account**: Username: `admin` | Password: `admin123` (or `PawPulse@2026`) with 1-click auto-fill button.
   - **New User Registration (Sign Up)**: Real self-service account creation (Name, Email, Username, Password, Role) persisting in `localStorage`.
+  - **Custom In-DOM Role Selection**: Interactive 2x2 role cards and custom in-DOM dropdown menu (Pet Parent, Vet, Coordinator, Admin) with zero OS blank white spots.
   - **Continue with Google**: Authenticate with ANY Google/Gmail account of your choice via dynamic input modal.
   - **Bloom Filter Guard**: Subtle client-side $O(1)$ leaked credential check protecting password inputs.
 - **Smart AI Auto-Dashboard Studio (`/studio`)**:

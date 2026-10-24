@@ -15,6 +15,12 @@ import {
   Sparkles,
   KeyRound,
   X,
+  ChevronDown,
+  Shield,
+  Stethoscope,
+  GitPullRequest,
+  Heart,
+  Check,
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -31,6 +37,45 @@ export default function LoginPage() {
   const [signupUsername, setSignupUsername] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupRole, setSignupRole] = useState('OWNER');
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+
+  const roleOptions = [
+    {
+      id: 'OWNER',
+      label: 'Pet Parent',
+      sub: 'Pet Health Records & Booking',
+      icon: Heart,
+      iconColor: '#fb7185',
+      badge: 'Parent',
+    },
+    {
+      id: 'VET',
+      label: 'Veterinarian',
+      sub: 'Clinical Queue & Camera Rx',
+      icon: Stethoscope,
+      iconColor: '#34d399',
+      badge: 'Doctor',
+    },
+    {
+      id: 'COORDINATOR',
+      label: 'Care Coordinator',
+      sub: 'SLA Pipeline & Referrals',
+      icon: GitPullRequest,
+      iconColor: '#fbbf24',
+      badge: 'Coord',
+    },
+    {
+      id: 'ADMIN',
+      label: 'Clinic Operations Admin',
+      sub: 'Full Operations & Analytics',
+      icon: Shield,
+      iconColor: '#818cf8',
+      badge: 'Admin',
+    },
+  ];
+
+  const currentRoleObj = roleOptions.find((r) => r.id === signupRole) || roleOptions[0];
+  const CurrentRoleIcon = currentRoleObj.icon;
 
   // Status & Google Dialog
   const [error, setError] = useState('');
@@ -477,54 +522,174 @@ export default function LoginPage() {
               </div>
 
               <div className="paw-form-group">
-                <label className="paw-form-label">Select Your Role</label>
-                
-                {/* Visual Role Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginBottom: '8px' }}>
-                  {[
-                    { role: 'OWNER', label: 'Pet Parent', sub: 'Pet Health Records' },
-                    { role: 'VET', label: 'Veterinarian', sub: 'Clinical Console & Rx' },
-                    { role: 'COORDINATOR', label: 'Coordinator', sub: 'SLA & Referrals' },
-                    { role: 'ADMIN', label: 'Clinic Admin', sub: 'Full Operations' },
-                  ].map((item) => (
-                    <div
-                      key={item.role}
-                      onClick={() => setSignupRole(item.role)}
+                <label className="paw-form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Select Account Role</span>
+                  <span style={{ fontSize: '0.74rem', color: currentRoleObj.iconColor, fontWeight: 600 }}>
+                    Selected: {currentRoleObj.label}
+                  </span>
+                </label>
+
+                {/* 1. Custom In-DOM Dropdown (Pure React - Zero Native OS Windows Popup) */}
+                <div style={{ position: 'relative', marginBottom: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      background: '#131b2e',
+                      border: '1px solid rgba(255, 255, 255, 0.16)',
+                      borderRadius: '8px',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                      fontSize: '0.88rem',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.16)')}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <CurrentRoleIcon size={16} color={currentRoleObj.iconColor} />
+                      <span style={{ fontWeight: 600, color: '#ffffff' }}>{currentRoleObj.label}</span>
+                      <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>• {currentRoleObj.sub}</span>
+                    </div>
+                    <ChevronDown
+                      size={16}
                       style={{
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        border: signupRole === item.role ? '1px solid #818cf8' : '1px solid rgba(255, 255, 255, 0.1)',
-                        background: signupRole === item.role ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.03)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
+                        transform: roleDropdownOpen ? 'rotate(180deg)' : 'none',
+                        transition: 'transform 0.2s ease',
+                        color: '#94a3b8',
+                      }}
+                    />
+                  </button>
+
+                  {/* Floating In-DOM Dropdown List */}
+                  {roleDropdownOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 4px)',
+                        left: 0,
+                        right: 0,
+                        background: '#131b2e',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '10px',
+                        boxShadow: '0 16px 36px rgba(0, 0, 0, 0.85)',
+                        zIndex: 100,
+                        padding: '6px',
+                        backdropFilter: 'blur(20px)',
                       }}
                     >
-                      <div style={{ fontWeight: 600, fontSize: '0.84rem', color: signupRole === item.role ? '#fff' : '#cbd5e1' }}>
-                        {item.label}
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        {item.sub}
-                      </div>
+                      {roleOptions.map((opt) => {
+                        const Icon = opt.icon;
+                        const isSelected = signupRole === opt.id;
+                        return (
+                          <div
+                            key={opt.id}
+                            onClick={() => {
+                              setSignupRole(opt.id);
+                              setRoleDropdownOpen(false);
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '10px 12px',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              background: isSelected ? 'rgba(99, 102, 241, 0.22)' : 'transparent',
+                              color: '#ffffff',
+                              transition: 'background 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = isSelected
+                                ? 'rgba(99, 102, 241, 0.32)'
+                                : 'rgba(255, 255, 255, 0.08)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = isSelected
+                                ? 'rgba(99, 102, 241, 0.22)'
+                                : 'transparent';
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div
+                                style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  borderRadius: '6px',
+                                  background: 'rgba(255, 255, 255, 0.06)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <Icon size={15} color={opt.iconColor} />
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 600, fontSize: '0.84rem', color: '#ffffff' }}>
+                                  {opt.label}
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{opt.sub}</div>
+                              </div>
+                            </div>
+                            {isSelected && <Check size={16} color="#818cf8" />}
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
+                  )}
                 </div>
 
-                {/* Styled Select Fallback */}
-                <select
-                  value={signupRole}
-                  onChange={(e) => setSignupRole(e.target.value)}
-                  className="paw-form-select"
-                  style={{
-                    backgroundColor: '#131b2e',
-                    color: '#ffffff',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                  }}
-                >
-                  <option value="OWNER" style={{ backgroundColor: '#131b2e', color: '#ffffff' }}>Pet Parent (Pet Health Records & Booking)</option>
-                  <option value="VET" style={{ backgroundColor: '#131b2e', color: '#ffffff' }}>Veterinarian (Consultation Queue & Camera Rx)</option>
-                  <option value="COORDINATOR" style={{ backgroundColor: '#131b2e', color: '#ffffff' }}>Care Coordinator (SLA Pipeline & Referrals)</option>
-                  <option value="ADMIN" style={{ backgroundColor: '#131b2e', color: '#ffffff' }}>Clinic Operations Admin (Full Management)</option>
-                </select>
+                {/* 2. Visual Role Selection Cards (2x2 Grid) */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                  {roleOptions.map((item) => {
+                    const Icon = item.icon;
+                    const isSelected = signupRole === item.id;
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => {
+                          setSignupRole(item.id);
+                          setRoleDropdownOpen(false);
+                        }}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          border: isSelected ? '1.5px solid #818cf8' : '1px solid rgba(255, 255, 255, 0.1)',
+                          background: isSelected ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.07)';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Icon size={14} color={item.iconColor} />
+                            <span style={{ fontWeight: 600, fontSize: '0.82rem', color: isSelected ? '#ffffff' : '#cbd5e1' }}>
+                              {item.label}
+                            </span>
+                          </div>
+                          {isSelected && <Check size={13} color="#818cf8" />}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.25 }}>
+                          {item.sub}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <button

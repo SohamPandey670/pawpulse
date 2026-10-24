@@ -5,6 +5,7 @@
 
 /* CSS Custom Properties */
 :root {
+  color-scheme: dark;
   /* Colors */
   --bg-primary: #0a0a0f;
   --bg-secondary: #12121a;
@@ -84,12 +85,14 @@
 }
 
 html {
+  color-scheme: dark;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 body {
+  color-scheme: dark;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
@@ -1991,14 +1994,22 @@ a:hover {
 }
 
 select, .paw-form-select, .paw-form-select-sm {
-  background-color: #131b2e;
-  color: #f8fafc;
+  color-scheme: dark !important;
+  background-color: #131b2e !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 select option, .paw-form-select option, .paw-form-select-sm option, option {
+  color-scheme: dark !important;
   background-color: #131b2e !important;
   color: #f8fafc !important;
   padding: 10px 14px;
+}
+
+select option:checked, select option:hover {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
 }
 
 .paw-form-input:focus, .paw-form-select:focus, .paw-form-textarea:focus {
@@ -2007,11 +2018,12 @@ select option, .paw-form-select option, .paw-form-select-sm option, option {
 }
 
 .paw-form-select-sm {
+  color-scheme: dark !important;
   padding: 6px 10px;
-  background: #131b2e;
+  background: #131b2e !important;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
-  color: #fff;
+  color: #fff !important;
   font-size: 0.78rem;
   outline: none;
 }

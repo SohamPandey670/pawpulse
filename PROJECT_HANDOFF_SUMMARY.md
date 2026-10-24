@@ -105,6 +105,13 @@ PawPulse was engineered as a production-ready, full-stack veterinary operations 
   6. *Independent Standalone Codebase*: Created a dedicated standalone repository at `C:\Users\soham\Desktop\smart-dashboard-ai` with its own `package.json`, Vite configuration, README, and verification build so the user can develop and run it independently or merge it anytime.
 * **Why**: To provide an intuitive, standard production app login flow, give the user master admin credentials, eliminate hardcoded mock files in the analytics studio, and fulfill the requirement of maintaining an independent codebase for future modularity.
 
+### Phase 15: Windows Dropdown Contrast Fix & Custom In-DOM Role Selection Engine
+* **What was done**:
+  1. *OS Native Select Contrast Fix*: Resolved the Windows Chromium native dropdown issue where light OS themes caused native `<select>` popups to render as a blank white box with white text. Added `color-scheme: dark !important;` to `:root`, `html`, `body`, and all `select` and `option` tags across the application.
+  2. *Custom In-DOM Dropdown*: Replaced fragile native HTML `<select>` elements in `LoginPage.jsx` with a 100% custom in-DOM React dropdown menu and interactive 2x2 visual role cards (`Pet Parent`, `Veterinarian`, `Care Coordinator`, `Clinic Admin`).
+  3. *Zero OS Interference*: The custom dropdown and role cards render purely in the React DOM with dark glassmorphic backgrounds (`#131b2e`), crisp white text, active glowing borders, and checkmark indicators, ensuring options are 100% visible on all operating systems and browsers with zero blank white spots.
+* **Why**: Native HTML `<select>` popups on Windows delegate rendering to the OS window manager. When CSS sets white text on dark themes, Windows in light mode often displays a white popup window with invisible white text. Replacing this with an in-DOM custom React component guarantees consistent dark glassmorphic styling across all platforms.
+
 ---
 
 ## 3. Directory & Deliverables Inventory
