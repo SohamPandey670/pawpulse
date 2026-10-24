@@ -6,11 +6,23 @@
 [![Power BI](https://img.shields.io/badge/Power_BI-Desktop-F2C811?logo=powerbi&logoColor=black)](https://powerbi.microsoft.com)
 [![Excel](https://img.shields.io/badge/Advanced_Excel-Management_Pack-107C41?logo=microsoftexcel&logoColor=white)](https://office.com)
 
-PawPulse is an enterprise-grade full-stack operations and clinical analytics platform designed for veterinary hospital networks, mobile clinics, and teleconsultation hubs.
+PawPulse is a unified enterprise platform featuring dual workspaces:
+1. **📊 Universal CSV / Excel Auto-Dashboard Studio (`/studio`)**: Upload any `.csv`, `.xlsx`, or `.xls` file to instantly generate summary KPIs, auto-detect metrics and dimensions, construct interactive charts (Bar, Line, Area, Pie), and explore datasets without server configuration.
+2. **🐾 Veterinary Clinic Healthcare Suite (`/dashboard`, `/vet`, `/owner`, `/coordinator`)**: Full-stack clinical operations engine with Admin KPI suite, Care Coordinator SLA engine, Vet Clinical Console with live camera/picture prescription uploads, and Pet Parent portal.
 
 **Live Frontend (Vercel)**: [https://pawpulse-sohams-projects-011c1ac2.vercel.app](https://pawpulse-sohams-projects-011c1ac2.vercel.app)  
 **Live Backend API (Render)**: [https://pawpulse-v1df.onrender.com](https://pawpulse-v1df.onrender.com)  
 **Database (Supabase)**: Managed PostgreSQL 15 on AWS Mumbai Pooler
+
+---
+
+## 🌟 Dual Workspace Architecture & Quick Switching
+
+- **Login Page Mode Switcher (`/login`)**:
+  - **Option 1: "Make Dashboard from CSV/Excel"** — launches the browser-based SheetJS + Recharts analytics studio.
+  - **Option 2: "PawPulse Clinic Operations"** — launches the veterinary clinical operations suite with 1-click role logins (Admin, Coordinator, Vet, Owner).
+- **In-App Navbar Switcher**: Instant `[ 📊 Make Dashboard (CSV/Excel) ]` ⟷ `[ 🐾 Clinic Operations ]` header toggle.
+- **Vet Console Photo / Camera Uploads (`/vet`)**: Live webcam or mobile camera photo snapping, image file uploads (`.png`, `.jpg`, `.webp`), prescription zoom modals, and pet parent portal synchronization.
 
 ---
 
@@ -75,11 +87,12 @@ pawpulse/
 │   │   ├── context/               # AuthContext with 1-click persona demo logins
 │   │   ├── data/                  # syntheticData.js (high-fidelity fallback datasets)
 │   │   ├── pages/
-│   │   │   ├── LoginPage.jsx      # Role selection cards + credential form
+│   │   │   ├── LoginPage.jsx      # Dual workspace picker + role cards
+│   │   │   ├── DashboardStudio.jsx# CSV/Excel auto-dashboard studio & chart builder
 │   │   │   ├── AdminDashboard.jsx # 15 KPIs, Recharts charts, Leaderboards
 │   │   │   ├── CoordinatorView.jsx# Referral SLA pipeline & Rx follow-up desk
-│   │   │   ├── VetConsole.jsx     # Consult queue & digital Rx generator
-│   │   │   ├── OwnerPortal.jsx    # Live pet parent records & treatment plans
+│   │   │   ├── VetConsole.jsx     # Consult queue, digital & photo Rx generator
+│   │   │   ├── OwnerPortal.jsx    # Live pet parent records, treatment plans & Rx photo viewer
 │   │   │   ├── BookingPage.jsx    # Interactive booking wizard
 │   │   │   └── AppointmentsPage.jsx # Multi-filtered master log
 │   │   ├── services/              # api.js with JWT interceptor & baseURL normalization

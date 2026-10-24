@@ -81,6 +81,9 @@ PawPulse delivers an end-to-end, multi-tenant digital health operations suite th
 | **Appointments** | `APPT-02` | Self-service booking engine with dynamic time slot generation and conflict detection. | P0 |
 | **Clinical Console** | `VET-01` | Vet-specific workspace showing daily schedule, patient medical records, and past diagnoses. | P0 |
 | **Clinical Console** | `VET-02` | Digital SOAP note recording and prescription writer with dosage, frequency, and duration. | P0 |
+| **Clinical Console** | `VET-03` | Live webcam/mobile camera prescription snapping & image upload (`.jpg`, `.png`, `.webp`, `.pdf`) with zoom preview modal. | P0 |
+| **Dashboard Studio** | `STUDIO-01`| Client-side CSV/Excel auto-dashboard studio with instant KPI generation, dynamic Recharts, and data explorer without new infrastructure. | P0 |
+| **Dual Workspace**   | `SWITCH-01`| 1-click dual workspace switcher on Login Page and Header (Studio ⟷ Clinic Operations). | P0 |
 | **Referrals** | `REF-01` | Inter-clinic referral tracking module with approval SLA timers and clinical handoff notes. | P1 |
 | **Owner Portal** | `OWN-01` | Pet parent dashboard with pet profiles, upcoming appointments, prescription downloads, and billing receipts. | P1 |
 | **Data Sync** | `SYNC-01` | Resilient offline-first mock dataset fallback (5,506 records) ensuring zero-failure client presentation. | P0 |

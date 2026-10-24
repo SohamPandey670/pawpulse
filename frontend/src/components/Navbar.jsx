@@ -1,11 +1,13 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { demoUsers } from '../data/syntheticData';
-import { Sparkles, Layers, Database } from 'lucide-react';
+import { Sparkles, Layers, Database, BarChart3, Activity } from 'lucide-react';
 
 export default function Navbar() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isStudio = location.pathname === '/studio';
 
   const handleQuickSwitch = (roleKey) => {
     const creds = demoUsers[roleKey];
@@ -24,15 +26,41 @@ export default function Navbar() {
     <header className="paw-navbar">
       <div className="paw-navbar-left">
         <div className="paw-navbar-title-wrap">
-          <h1 className="paw-navbar-title">Pet Healthcare Operations Engine</h1>
+          <h1 className="paw-navbar-title">
+            {isStudio ? 'CSV / Excel Auto-Dashboard Studio' : 'Pet Healthcare Operations Engine'}
+          </h1>
           <span className="paw-badge badge-cyan" style={{ fontSize: '0.72rem' }}>
             <Database size={11} style={{ marginRight: '4px' }} />
-            PostgreSQL + Spring Boot + React + Power BI
+            {isStudio ? 'Client-Side SheetJS + Recharts Analytics' : 'PostgreSQL + Spring Boot + React + Power BI'}
           </span>
         </div>
       </div>
 
       <div className="paw-navbar-right">
+        {/* Workspace Switcher Button */}
+        <button
+          onClick={() => navigate(isStudio ? '/dashboard' : '/studio')}
+          className="paw-btn paw-btn-xs"
+          style={{
+            background: isStudio
+              ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(139, 92, 246, 0.25))'
+              : 'linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(59, 130, 246, 0.25))',
+            border: isStudio ? '1px solid rgba(99, 102, 241, 0.5)' : '1px solid rgba(6, 182, 212, 0.5)',
+            color: isStudio ? '#a5b4fc' : '#67e8f9',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontWeight: 600,
+            padding: '6px 12px',
+            borderRadius: '6px',
+            cursor: 'pointer',
+          }}
+          title={isStudio ? 'Switch to Clinic Dashboard' : 'Switch to Make Dashboard from CSV/Excel'}
+        >
+          {isStudio ? <Activity size={14} /> : <BarChart3 size={14} />}
+          <span>{isStudio ? '🐾 Clinic Operations' : '📊 Make Dashboard (CSV/Excel)'}</span>
+        </button>
+
         {/* Instant Role Switcher */}
         <div className="paw-quick-switcher">
           <span className="paw-switcher-label">

@@ -79,6 +79,22 @@ PawPulse was engineered as a production-ready, full-stack veterinary operations 
 * **What was done**: Created [sql/startup_seed.sql](file:///C:/Users/soham/Desktop/pawpulse/sql/startup_seed.sql) with 100% valid hexadecimal UUIDs: 2 clinics, 2 vets, 4 owners, 5 distinct patient pets (`balls`, `Luna`, `Rocky`, `Whiskers`, `Charlie`), and 20 monthly appointments.
 * **Why**: The initial 300+ random seed script had confusing duplicate names across cats and dogs. The startup dataset gives the user an intuitive, clean, easy-to-understand dataset matching an early-stage veterinary clinic.
 
+### Phase 12: Camera & Photo Prescription Upload System
+* **What was done**:
+  1. Updated [VetConsole.jsx](file:///C:/Users/soham/Desktop/pawpulse/frontend/src/pages/VetConsole.jsx) with live camera streaming using `navigator.mediaDevices.getUserMedia`, video viewfinder preview, and canvas capture to generate JPEG data URLs.
+  2. Integrated file input (`.jpg`, `.png`, `.webp`, `.pdf`) with mobile hardware camera trigger (`capture="environment"`).
+  3. Added prescription photo zoom modal, thumbnail cards, and flexible submission (supports photo-only, text-only, or combined).
+  4. Updated [OwnerPortal.jsx](file:///C:/Users/soham/Desktop/pawpulse/frontend/src/pages/OwnerPortal.jsx) to display prescription image badges and full-resolution lightbox viewer for pet parents.
+* **Why**: Real veterinarians frequently write physical slips, print lab tests, or photograph medication boxes rather than typing long prescription names manually into digital forms.
+
+### Phase 13: Universal CSV / Excel Auto-Dashboard Studio & Mode Switcher
+* **What was done**:
+  1. Integrated SheetJS (`xlsx`) into the React 18 frontend to parse any `.csv`, `.xlsx`, or `.xls` spreadsheet locally in the browser with zero server dependencies or additional cloud costs.
+  2. Created [DashboardStudio.jsx](file:///C:/Users/soham/Desktop/pawpulse/frontend/src/pages/DashboardStudio.jsx) featuring auto-detected metrics/dimensions, summary KPI scorecards, interactive Recharts builder (Bar, Line, Area, Pie), and a searchable data explorer.
+  3. Enhanced [LoginPage.jsx](file:///C:/Users/soham/Desktop/pawpulse/frontend/src/pages/LoginPage.jsx) with a dual-option workspace switcher (*1. Make Dashboard from CSV/Excel* vs *2. PawPulse Clinic Operations*).
+  4. Updated [Navbar.jsx](file:///C:/Users/soham/Desktop/pawpulse/frontend/src/components/Navbar.jsx) and [Sidebar.jsx](file:///C:/Users/soham/Desktop/pawpulse/frontend/src/components/Sidebar.jsx) with instant workspace switching buttons.
+* **Why**: The user requested a sub-project feature to create custom dashboards from arbitrary CSV/Excel files without creating a separate Vercel/Render/Supabase deployment, enabling both clinical operations and general data analytics in one place.
+
 ---
 
 ## 3. Directory & Deliverables Inventory

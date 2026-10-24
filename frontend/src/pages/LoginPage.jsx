@@ -13,9 +13,14 @@ import {
   Lock,
   Mail,
   CheckCircle2,
+  FileSpreadsheet,
+  BarChart3,
+  Layers,
+  UploadCloud,
 } from 'lucide-react';
 
 export default function LoginPage() {
+  const [selectedWorkspace, setSelectedWorkspace] = useState('clinic'); // 'csv_dashboard' | 'clinic'
   const [email, setEmail] = useState('admin@pawpulse.in');
   const [password, setPassword] = useState('admin123');
   const [error, setError] = useState('');
@@ -66,23 +71,192 @@ export default function LoginPage() {
             </h1>
           </div>
           <p className="paw-login-subtitle">
-            Enterprise Pet Healthcare Operations & Analytics Engine
+            Enterprise Healthcare Platform & Universal Data Intelligence Suite
           </p>
           <div className="paw-tech-stack-pills">
             <span className="paw-badge badge-indigo">Spring Boot 3</span>
             <span className="paw-badge badge-cyan">React 18</span>
             <span className="paw-badge badge-emerald">PostgreSQL 15</span>
-            <span className="paw-badge badge-amber">Power BI</span>
+            <span className="paw-badge badge-amber">CSV/Excel Studio</span>
           </div>
         </div>
 
-        {/* Demo Role Selector Cards */}
-        <div className="paw-demo-personas-section">
-          <div className="paw-demo-label">
-            <Sparkles size={14} className="text-accent" />
-            <span>Click any role below for instant demo login:</span>
+        {/* 2-Option Project Selector */}
+        <div
+          style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '14px',
+            padding: '8px',
+            marginBottom: '20px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: '8px',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setSelectedWorkspace('csv_dashboard')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 16px',
+              borderRadius: '10px',
+              border: selectedWorkspace === 'csv_dashboard' ? '1px solid #06b6d4' : '1px solid transparent',
+              background: selectedWorkspace === 'csv_dashboard' ? 'rgba(6, 182, 212, 0.15)' : 'transparent',
+              color: '#fff',
+              textAlign: 'left',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <BarChart3 size={20} color="#fff" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>1. Make Dashboard from CSV/Excel</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Upload any dataset to auto-generate KPIs & charts
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectedWorkspace('clinic')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 16px',
+              borderRadius: '10px',
+              border: selectedWorkspace === 'clinic' ? '1px solid #6366f1' : '1px solid transparent',
+              background: selectedWorkspace === 'clinic' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+              color: '#fff',
+              textAlign: 'left',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Activity size={20} color="#fff" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>2. PawPulse Clinic Dashboard</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Clinical ops, vet queue, camera Rx & owner portal
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* WORKSPACE VIEW 1: CSV / Excel Dashboard Studio Launcher */}
+        {selectedWorkspace === 'csv_dashboard' && (
+          <div
+            className="paw-card"
+            style={{
+              padding: '24px',
+              marginBottom: '20px',
+              border: '1px solid rgba(6, 182, 212, 0.3)',
+              background: 'radial-gradient(circle at top, rgba(6, 182, 212, 0.08) 0%, rgba(15, 23, 42, 0.8) 100%)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+              <FileSpreadsheet size={24} className="text-cyan" />
+              <div>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#fff', margin: 0 }}>
+                  CSV & Excel Auto-Dashboard Studio
+                </h2>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Turn any spreadsheet or exported CSV into instant interactive visual analytics.
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '10px',
+                marginBottom: '18px',
+              }}
+            >
+              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 14px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Supported Formats</div>
+                <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.85rem' }}>.CSV, .XLSX, .XLS</div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 14px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Visuals Included</div>
+                <div style={{ fontWeight: 600, color: '#fff', fontSize: '0.85rem' }}>Bar, Line, Area, Pie</div>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 14px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Infrastructure</div>
+                <div style={{ fontWeight: 600, color: '#10b981', fontSize: '0.85rem' }}>Client-Side / Zero Setup</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => navigate('/studio')}
+                className="paw-btn paw-btn-primary"
+                style={{
+                  background: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
+                  flex: 1,
+                  justifyContent: 'center',
+                  padding: '12px 20px',
+                  fontSize: '0.95rem',
+                }}
+              >
+                <UploadCloud size={18} />
+                <span>Launch Auto-Dashboard Studio</span>
+                <ArrowRight size={16} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedWorkspace('clinic')}
+                className="paw-btn paw-btn-secondary"
+                style={{ padding: '12px 18px' }}
+              >
+                Go to Clinic Operations
+              </button>
+            </div>
           </div>
-          <div className="paw-role-cards-grid">
+        )}
+
+        {/* WORKSPACE VIEW 2: Clinic Operations Demo Personas & Creds */}
+        {selectedWorkspace === 'clinic' && (
+          <>
+            <div className="paw-demo-personas-section">
+              <div className="paw-demo-label">
+                <Sparkles size={14} className="text-accent" />
+                <span>Click any role below for instant demo login:</span>
+              </div>
+              <div className="paw-role-cards-grid">
             <button
               type="button"
               onClick={() => selectDemoRole('admin')}
@@ -186,6 +360,8 @@ export default function LoginPage() {
             </button>
           </form>
         </div>
+          </>
+        )}
 
         <div className="paw-login-footer">
           <CheckCircle2 size={14} className="text-emerald" />

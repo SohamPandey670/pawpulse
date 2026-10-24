@@ -12,6 +12,7 @@ import {
   Shield,
   Activity,
   ChevronRight,
+  BarChart3,
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -24,6 +25,13 @@ export default function Sidebar() {
       icon: LayoutDashboard,
       roles: ['ADMIN'],
       badge: 'Live',
+    },
+    {
+      to: '/studio',
+      label: 'CSV/Excel Studio',
+      icon: BarChart3,
+      roles: ['ADMIN', 'COORDINATOR', 'VET', 'OWNER'],
+      badge: 'Maker',
     },
     {
       to: '/coordinator',

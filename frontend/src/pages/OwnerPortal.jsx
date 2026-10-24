@@ -6,6 +6,9 @@ import {
   CheckCircle2,
   CalendarPlus,
   ShieldCheck,
+  Camera,
+  Eye,
+  X,
 } from 'lucide-react';
 import { PetService, AppointmentService, PrescriptionService } from '../services/api';
 
@@ -15,6 +18,7 @@ export default function OwnerPortal() {
   const [prescriptions, setPrescriptions] = useState([]);
   const [selectedPet, setSelectedPet] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [previewModalImg, setPreviewModalImg] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -145,6 +149,33 @@ export default function OwnerPortal() {
                     <div className="text-xs text-muted" style={{ marginTop: '4px' }}>
                       Prescribed on {new Date(rx.prescribedAt).toLocaleDateString()}
                     </div>
+
+                    {rx.photoUrl && (
+                      <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <img
+                          src={rx.photoUrl}
+                          alt="Prescription preview"
+                          onClick={() => setPreviewModalImg(rx.photoUrl)}
+                          style={{
+                            width: '42px',
+                            height: '42px',
+                            objectFit: 'cover',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                          }}
+                          title="Click to view full photo"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setPreviewModalImg(rx.photoUrl)}
+                          className="paw-btn paw-btn-xs paw-btn-secondary"
+                        >
+                          <Camera size={12} style={{ marginRight: '4px' }} />
+                          <span>View Clinical Photo</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <span className="paw-badge badge-indigo">
                     <CheckCircle2 size={12} style={{ marginRight: '4px' }} />
@@ -218,6 +249,74 @@ export default function OwnerPortal() {
           </div>
         </div>
       </div>
+
+      {/* Prescription Photo Modal */}
+      {previewModalImg && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backdropFilter: 'blur(6px)',
+          }}
+          onClick={() => setPreviewModalImg(null)}
+        >
+          <div
+            style={{
+              position: 'relative',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              background: '#131b2e',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '12px 18px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'rgba(15, 23, 42, 0.8)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontWeight: 600 }}>
+                <Camera size={16} className="text-emerald" />
+                <span>Clinical Prescription / Lab Note</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewModalImg(null)}
+                className="paw-btn paw-btn-xs paw-btn-secondary"
+                style={{ padding: '4px 8px' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div style={{ padding: '16px', display: 'flex', justifyContent: 'center', background: '#0a0e17' }}>
+              <img
+                src={previewModalImg}
+                alt="Enlarged Prescription"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '75vh',
+                  objectFit: 'contain',
+                  borderRadius: '6px',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

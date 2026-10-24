@@ -38,6 +38,9 @@ graph TD
 | **Connection Pool** | HikariCP | 5.0.x | Ultra-lightweight, zero-overhead connection pooling with sub-millisecond connection acquisition. |
 | **Database** | PostgreSQL / H2 | 15.x / 2.2 | ACID-compliant transactional guarantees, relational integrity, powerful window functions, and in-memory dev agility. |
 | **Security & Auth** | Spring Security + JJWT | 6.x / 0.12 | Stateless JWT token verification, BCrypt password hashing (cost factor 10), method-level authorization (`@PreAuthorize`). |
+| **Spreadsheet Engine** | SheetJS (xlsx) | 0.18.x | High-speed, client-side binary parsing of `.csv`, `.xlsx`, and `.xls` files directly in the browser with 0ms server latency. |
+| **Visual Analytics** | Recharts & Lucide | 2.x | Declarative composable SVG visualization components (Bar, Line, Area, Pie) and responsive vector icon set. |
+| **Media & Hardware API**| Web MediaDevices API | HTML5 | Live camera streaming (`getUserMedia`) & HTML5 capture (`capture="environment"`) for digital prescription imaging. |
 | **Containerization** | Docker Multi-Stage | Alpine | Clean separation between Maven build environment and minimal JRE runtime image (< 180MB total image footprint). |
 | **Cloud Hosting** | Vercel (UI) + Render (API) | Cloud | Global CDN edge caching for UI assets combined with containerized dynamic port cloud instances for backend APIs. |
 

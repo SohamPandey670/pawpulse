@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
+import DashboardStudio from './pages/DashboardStudio';
 import AdminDashboard from './pages/AdminDashboard';
 import CoordinatorView from './pages/CoordinatorView';
 import VetConsole from './pages/VetConsole';
@@ -16,6 +17,9 @@ export default function App() {
       <Routes>
         {/* Public login route */}
         <Route path="/login" element={<LoginPage />} />
+
+        {/* Public / Standalone CSV/Excel Dashboard Studio */}
+        <Route path="/studio" element={<DashboardStudio />} />
 
         {/* Authenticated workspace shell */}
         <Route
